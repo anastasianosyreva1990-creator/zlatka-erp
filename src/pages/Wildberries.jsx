@@ -1,261 +1,200 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-const PCOL = {
-  'Кокошник Красный': '#E24B4A',
-  'Кокошник Белый': '#888780',
-  'Кокошник Черный': '#2C2C2A',
-  'Кокошник Цветной': '#1D9E75'
-}
-const PLBL = {
-  'Кокошник Красный': 'Красный',
-  'Кокошник Белый': 'Белый',
-  'Кокошник Черный': 'Чёрный',
-  'Кокошник Цветной': 'Цветной'
-}
+const PCOL = {'Кокошник Красный':'#C0392B','Кокошник Белый':'#7F8C8D','Кокошник Черный':'#2C3E50','Кокошник Цветной':'#27AE60'}
+const PLBL = {'Кокошник Красный':'Красный','Кокошник Белый':'Белый','Кокошник Черный':'Чёрный','Кокошник Цветной':'Цветной'}
 const PRODUCTS = Object.keys(PCOL)
 const fmt = x => Math.round(x).toLocaleString('ru-RU')
-const fD = x => x.toFixed(1)
+const DAILY = {'Кокошник Красный':515/14,'Кокошник Белый':63/14,'Кокошник Черный':164/14,'Кокошник Цветной':19/14}
+const IL=1.40,IRP=0.0207,VOL=0.8,PRICE=850
 
-// Скорость продаж в день (из апрельских данных)
-const DAILY_SALES = {
-  'Кокошник Красный': 515 / 14,
-  'Кокошник Белый': 63 / 14,
-  'Кокошник Черный': 164 / 14,
-  'Кокошник Цветной': 19 / 14
-}
-
-// Склады WB с тарифами
-const WAREHOUSES = [
-  { id: 'ekb', name: 'Екатеринбург', fo: 'Уральский', tariff: 190, logFirst: 87.4, sdek: 934 },
-  { id: 'vlad', name: 'Владимир', fo: 'Центральный', tariff: 130, logFirst: 59.8, sdek: 1354 },
-  { id: 'voronezh', name: 'Воронеж', fo: 'Центральный', tariff: 130, logFirst: 59.8, sdek: 1460 },
-  { id: 'kotovsk', name: 'Котовск', fo: 'Центральный', tariff: 120, logFirst: 55.2, sdek: 1565 },
-  { id: 'novosem', name: 'Новосемейкино', fo: 'Приволжский', tariff: 160, logFirst: 73.6, sdek: 1249 },
+const WHS = [
+  {id:'ekb',name:'Екатеринбург',fo:'Уральский',tariff:190,sdek:934},
+  {id:'vlad',name:'Владимир',fo:'Центральный',tariff:130,sdek:1354},
+  {id:'voronezh',name:'Воронеж',fo:'Центральный',tariff:130,sdek:1460},
+  {id:'kotovsk',name:'Котовск',fo:'Центральный',tariff:120,sdek:1565},
+  {id:'novosem',name:'Новосемейкино',fo:'Приволжский',tariff:160,sdek:1249},
 ]
 
-const IL = 1.40
-const IRP = 0.0207
-const VOLUME = 0.8
-const PRICE = 850
+function logCost(wh){return Math.round(VOL*30*(wh.tariff/100)*IL+PRICE*IRP)}
 
-function calcLogistics(wh) {
-  return VOLUME * 30 * (wh.tariff / 100) * IL + PRICE * IRP
-}
+export default function Wildberries(){
+  const [wbStocks,setWbStocks]=useState([])
+  const [shipments,setShipments]=useState([])
+  const [loading,setLoading]=useState(true)
+  const [activeTab,setActiveTab]=useState('signals')
+  const [shDate,setShDate]=useState(new Date().toISOString().split('T')[0])
+  const [shType,setShType]=useState('Кокошник Красный')
+  const [shQty,setShQty]=useState('')
+  const [shWh,setShWh]=useState('ekb')
+  const [shTk,setShTk]=useState('СДЭК')
+  const [shNakl,setShNakl]=useState('')
+  const [shArrival,setShArrival]=useState('')
+  const [shWbNum,setShWbNum]=useState('')
+  const [shShk,setShShk]=useState('')
+  const [shShkp,setShShkp]=useState('')
+  const [shFb,setShFb]=useState('')
+  const [upWh,setUpWh]=useState('ekb')
+  const [upProd,setUpProd]=useState('Кокошник Красный')
+  const [upQty,setUpQty]=useState('')
+  const [upFb,setUpFb]=useState('')
+  const [goalProfit,setGoalProfit]=useState(400000)
+  const [goalBuyout,setGoalBuyout]=useState(47)
 
-export default function Wildberries() {
-  const [wbStocks, setWbStocks] = useState([])
-  const [shipments, setShipments] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('signals')
+  useEffect(()=>{loadAll()},[])
 
-  // Форма отгрузки
-  const [shDate, setShDate] = useState(new Date().toISOString().split('T')[0])
-  const [shType, setShType] = useState('Кокошник Красный')
-  const [shQty, setShQty] = useState('')
-  const [shWh, setShWh] = useState('ekb')
-  const [shTk, setShTk] = useState('СДЭК')
-  const [shNakl, setShNakl] = useState('')
-  const [shArrival, setShArrival] = useState('')
-  const [shWbNum, setShWbNum] = useState('')
-  const [shShk, setShShk] = useState('')
-  const [shShkp, setShShkp] = useState('')
-  const [shFb, setShFb] = useState('')
-
-  // Обновление остатков
-  const [upWh, setUpWh] = useState('ekb')
-  const [upProd, setUpProd] = useState('Кокошник Красный')
-  const [upQty, setUpQty] = useState('')
-  const [upFb, setUpFb] = useState('')
-
-  // Цель месяца
-  const [goalProfit, setGoalProfit] = useState(400000)
-  const [goalBuyout, setGoalBuyout] = useState(47)
-
-  useEffect(() => { loadAll() }, [])
-
-  async function loadAll() {
+  async function loadAll(){
     setLoading(true)
-    const [{ data: wb }, { data: sh }] = await Promise.all([
+    const [{data:wb},{data:sh}]=await Promise.all([
       supabase.from('wb_stocks').select('*'),
-      supabase.from('shipments').select('*').order('ship_date', { ascending: false }),
+      supabase.from('shipments').select('*').order('ship_date',{ascending:false}),
     ])
-    setWbStocks(wb || [])
-    setShipments(sh || [])
-    setLoading(false)
+    setWbStocks(wb||[]);setShipments(sh||[]);setLoading(false)
   }
 
-  function getStock(whId, prod) {
-    return wbStocks.find(s => s.warehouse === whId && s.product === prod)?.quantity || 0
+  function getStock(whId,prod){return wbStocks.find(s=>s.warehouse===whId&&s.product===prod)?.quantity||0}
+  function daysLeft(whId,prod){const qty=getStock(whId,prod);const spd=DAILY[prod]||1;return Math.floor(qty/spd)}
+
+  async function updateStock(){
+    if(!upQty) return
+    const qty=parseInt(upQty)
+    const existing=wbStocks.find(s=>s.warehouse===upWh&&s.product===upProd)
+    if(existing) await supabase.from('wb_stocks').update({quantity:qty,updated_at:new Date().toISOString()}).eq('id',existing.id)
+    else await supabase.from('wb_stocks').insert({warehouse:upWh,product:upProd,quantity:qty})
+    setUpFb(`✓ Обновлено: ${WHS.find(w=>w.id===upWh)?.name} / ${PLBL[upProd]} = ${qty} шт`)
+    setUpQty('');loadAll()
   }
 
-  function daysLeft(whId, prod) {
-    const qty = getStock(whId, prod)
-    const spd = DAILY_SALES[prod] || 1
-    return Math.floor(qty / spd)
-  }
-
-  async function updateStock() {
-    if (!upQty) return
-    const qty = parseInt(upQty)
-    const existing = wbStocks.find(s => s.warehouse === upWh && s.product === upProd)
-    if (existing) {
-      await supabase.from('wb_stocks').update({ quantity: qty, updated_at: new Date().toISOString() }).eq('id', existing.id)
-    } else {
-      await supabase.from('wb_stocks').insert({ warehouse: upWh, product: upProd, quantity: qty })
-    }
-    setUpFb(`✓ Обновлено: ${WAREHOUSES.find(w => w.id === upWh)?.name} / ${PLBL[upProd]} = ${qty} шт`)
-    setUpQty('')
-    loadAll()
-  }
-
-  async function addShipment() {
-    if (!shQty || !shDate) { setShFb('Заполните дату и количество'); return }
-    const wh = WAREHOUSES.find(w => w.id === shWh)
+  async function addShipment(){
+    if(!shQty||!shDate){setShFb('Заполните дату и количество');return}
+    const wh=WHS.find(w=>w.id===shWh)
     await supabase.from('shipments').insert({
-      ship_date: shDate,
-      product: shType,
-      quantity: parseInt(shQty),
-      warehouse: wh?.name || shWh,
-      tk: shTk,
-      invoice_num: shNakl,
-      wb_supply_num: shWbNum,
-      shk_box: shShk,
-      shk_supply: shShkp,
-      arrival_date: shArrival || null,
-      status: 'В пути'
+      ship_date:shDate,product:shType,quantity:parseInt(shQty),
+      warehouse:wh?.name||shWh,tk:shTk,invoice_num:shNakl,
+      wb_supply_num:shWbNum,shk_box:shShk,shk_supply:shShkp,
+      arrival_date:shArrival||null,status:'В пути'
     })
-    setShFb(`✓ Отгрузка добавлена: ${PLBL[shType]} → ${wh?.name} ${shQty} шт`)
-    setShQty(''); setShNakl(''); setShWbNum(''); setShShk(''); setShShkp('')
+    setShFb(`✓ Отгрузка: ${PLBL[shType]} → ${wh?.name} ${shQty} шт`)
+    setShQty('');setShNakl('');setShWbNum('');setShShk('');setShShkp('')
     loadAll()
   }
 
-  async function setShipStatus(id, val) {
-    await supabase.from('shipments').update({ status: val }).eq('id', id)
-    loadAll()
+  async function setShipStatus(id,val){
+    await supabase.from('shipments').update({status:val}).eq('id',id);loadAll()
   }
 
-  const foGroups = {}
-  WAREHOUSES.forEach(wh => {
-    if (!foGroups[wh.fo]) foGroups[wh.fo] = []
-    foGroups[wh.fo].push(wh)
-  })
+  const foGroups={}
+  WHS.forEach(wh=>{if(!foGroups[wh.fo])foGroups[wh.fo]=[];foGroups[wh.fo].push(wh)})
 
-  let deficitCount = 0
-  WAREHOUSES.forEach(wh => {
-    PRODUCTS.forEach(prod => {
-      const d = daysLeft(wh.id, prod)
-      const spd = DAILY_SALES[prod] || 0
-      if (spd > 0.5 && d <= 3) deficitCount++
-    })
-  })
+  let defCount=0
+  WHS.forEach(wh=>PRODUCTS.forEach(prod=>{if(DAILY[prod]>0.5&&daysLeft(wh.id,prod)<=3)defCount++}))
 
-  const avgProfit = 88
-  const needSold = Math.ceil(goalProfit / avgProfit)
-  const needOrders = Math.ceil(needSold / (goalBuyout / 100))
-  const needProd = Math.ceil(needSold * 1.05)
+  const avgProfit=88
+  const needSold=Math.ceil(goalProfit/avgProfit)
+  const needOrders=Math.ceil(needSold/(goalBuyout/100))
+  const needProd=Math.ceil(needSold*1.05)
 
-  if (loading) return <div style={{ padding: 40, color: '#888' }}>Загрузка...</div>
+  if(loading) return <div style={{padding:40,color:'#5A4A3A'}}>Загрузка...</div>
+
+  const Row=({label,value,color})=>(
+    <div style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'0.5px solid rgba(74,111,82,0.08)'}}>
+      <span style={{fontSize:12,fontWeight:600,color:'#3A2A1A'}}>{label}</span>
+      <span style={{fontSize:13,fontWeight:800,color:color||'#1C2E26',whiteSpace:'nowrap'}}>{value}</span>
+    </div>
+  )
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ fontSize: 22, fontWeight: 600 }}>Златка <span style={{ color: '#5DCAA5' }}>/ Wildberries</span></div>
-        <div style={{ fontSize: 11, padding: '3px 10px', borderRadius: 10, background: '#FAEEDA', color: '#854F0B', border: '1px solid #FAC775' }}>API не подключён · данные ручные</div>
+      <div className="page-header">
+        <h1 className="page-title">Wildberries <span>/ Склады</span></h1>
+        <span style={{fontSize:10,padding:'3px 10px',borderRadius:20,background:'#EEE4C8',color:'#6A4A10',fontWeight:700,border:'1px solid rgba(106,74,16,0.2)'}}>API не подключён</span>
       </div>
 
-      {/* Метрики */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 24 }}>
-        {[
-          { label: 'Заказов в день (апр)', value: '54', sub: 'средний темп' },
-          { label: 'Складов с дефицитом', value: deficitCount, color: deficitCount > 0 ? '#E24B4A' : '#111', sub: 'нужна отгрузка' },
-          { label: 'Индекс локализации', value: '1.40', color: '#E24B4A', sub: 'наценка ~40%' },
-          { label: 'Процент выкупа', value: '47%', sub: 'из статистики WB' },
-        ].map((m, i) => (
-          <div key={i} style={{ background: '#f9fafb', borderRadius: 12, padding: '14px 16px' }}>
-            <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>{m.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 600, color: m.color || '#111' }}>{m.value}</div>
-            <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{m.sub}</div>
-          </div>
+      <div className="metrics">
+        <div className="metric-card dark">
+          <div className="metric-label">Заказов в день (апр)</div>
+          <div className="metric-value">54</div>
+          <div className="metric-sub">средний темп</div>
+        </div>
+        <div className="metric-card wine">
+          <div className="metric-label">Складов с дефицитом</div>
+          <div className="metric-value" style={{color:defCount>0?'#6A1030':'#1A6B28'}}>{defCount}</div>
+          <div className="metric-sub">нужна отгрузка</div>
+        </div>
+        <div className="metric-card gold">
+          <div className="metric-label">Индекс локализации</div>
+          <div className="metric-value" style={{color:'#6A1030'}}>1.40</div>
+          <div className="metric-sub">наценка ~40%</div>
+        </div>
+        <div className="metric-card green">
+          <div className="metric-label">Процент выкупа</div>
+          <div className="metric-value">47%</div>
+          <div className="metric-sub">из статистики WB</div>
+        </div>
+      </div>
+
+      <div className="tabs">
+        {[{id:'signals',l:'Сигналы'},{id:'shipments',l:'Отгрузки'},{id:'sales',l:'Продажи'},{id:'goal',l:'Цель'},{id:'update',l:'Обновить'}].map(t=>(
+          <button key={t.id} className={`tab-btn${activeTab===t.id?' active':''}`} onClick={()=>setActiveTab(t.id)}>{t.l}</button>
         ))}
       </div>
 
-      {/* Табы */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-        {[
-          { id: 'signals', label: 'Сигналы по складам' },
-          { id: 'shipments', label: 'Отгрузки' },
-          { id: 'sales', label: 'Продажи' },
-          { id: 'goal', label: 'Цель месяца' },
-          { id: 'update', label: 'Обновить остатки' },
-        ].map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
-            padding: '6px 16px', borderRadius: 20,
-            border: activeTab === t.id ? '1px solid #5DCAA5' : '1px solid #e5e7eb',
-            background: activeTab === t.id ? '#f0fdf8' : 'transparent',
-            color: activeTab === t.id ? '#085041' : '#666',
-            cursor: 'pointer', fontSize: 13
-          }}>{t.label}</button>
-        ))}
-      </div>
-
-      {/* СИГНАЛЫ */}
-      {activeTab === 'signals' && (
+      {activeTab==='signals'&&(
         <div>
-          {Object.entries(foGroups).map(([fo, whs]) => (
-            <div key={fo} style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>{fo} ФО</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 12 }}>
-                {whs.map(wh => {
-                  const logCost = calcLogistics(wh)
-                  let hasCrit = false, hasWarn = false
-                  PRODUCTS.forEach(prod => {
-                    const d = daysLeft(wh.id, prod)
-                    const spd = DAILY_SALES[prod] || 0
-                    if (spd > 0.5 && d <= 3) hasCrit = true
-                    else if (spd > 0.5 && d <= 7) hasWarn = true
+          {Object.entries(foGroups).map(([fo,whs])=>(
+            <div key={fo} style={{marginBottom:20}}>
+              <div style={{fontSize:10,color:'#5A4A3A',textTransform:'uppercase',letterSpacing:1,marginBottom:10,fontWeight:800}}>{fo} ФО</div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:12}}>
+                {whs.map(wh=>{
+                  let hasCrit=false,hasWarn=false
+                  PRODUCTS.forEach(prod=>{
+                    const d=daysLeft(wh.id,prod),spd=DAILY[prod]||0
+                    if(spd>0.5&&d<=3) hasCrit=true
+                    else if(spd>0.5&&d<=7) hasWarn=true
                   })
-                  const borderColor = hasCrit ? '#E24B4A' : hasWarn ? '#BA7517' : '#e5e7eb'
-                  const tariffColor = wh.tariff <= 130 ? '#3B6D11' : wh.tariff <= 160 ? '#854F0B' : '#A32D2D'
+                  const lc=Math.round(logCost(wh))
+                  const borderColor=hasCrit?'#6A1030':hasWarn?'#6A4A10':'rgba(74,111,82,0.2)'
+                  const tariffBg=wh.tariff<=130?'#D8EED8':wh.tariff<=160?'#EEE4C8':'#EED4DD'
+                  const tariffColor=wh.tariff<=130?'#1A4A28':wh.tariff<=160?'#6A4A10':'#6A1030'
                   return (
-                    <div key={wh.id} style={{ background: '#fff', border: `1px solid ${borderColor}`, borderRadius: 14, overflow: 'hidden' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f9fafb' }}>
+                    <div key={wh.id} style={{background:'#fff',border:`1px solid ${borderColor}`,borderRadius:12,overflow:'hidden'}}>
+                      <div style={{background:'#1C2E26',padding:'10px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                         <div>
-                          <div style={{ fontWeight: 500, fontSize: 14 }}>{hasCrit ? '⚠ ' : ''}{wh.name}</div>
-                          <div style={{ fontSize: 11, color: '#888' }}>{wh.fo}</div>
+                          <div style={{fontWeight:800,fontSize:13,color:'#F2EBE0'}}>{hasCrit?'⚠ ':''}{wh.name}</div>
+                          <div style={{fontSize:10,color:'rgba(196,168,130,0.7)',marginTop:1}}>{wh.fo}</div>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 6, background: tariffColor === '#3B6D11' ? '#EAF3DE' : tariffColor === '#854F0B' ? '#FAEEDA' : '#FCEBEB', color: tariffColor }}>тариф {wh.tariff}%</span>
-                          <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>лог. ~{Math.round(logCost)} ₽/шт</div>
+                        <div style={{textAlign:'right'}}>
+                          <span style={{fontSize:10,padding:'2px 8px',borderRadius:8,background:tariffBg,color:tariffColor,fontWeight:700}}>тариф {wh.tariff}%</span>
+                          <div style={{fontSize:10,color:'rgba(196,168,130,0.7)',marginTop:2}}>лог. ~{lc} ₽/шт</div>
                         </div>
                       </div>
-                      <div style={{ padding: '8px 14px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 4, fontSize: 10, color: '#aaa', paddingBottom: 4, borderBottom: '1px solid #f0f0f0', marginBottom: 4 }}>
-                          <span>Цвет</span><span style={{ textAlign: 'right' }}>Остаток</span><span style={{ textAlign: 'right' }}>шт/день</span><span style={{ textAlign: 'right' }}>Статус</span>
+                      <div style={{padding:'8px 14px'}}>
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 50px 60px 80px',gap:4,fontSize:10,color:'#7A6A5A',fontWeight:700,paddingBottom:5,borderBottom:'1px solid rgba(196,168,130,0.15)',marginBottom:4,textTransform:'uppercase',letterSpacing:0.5}}>
+                          <span>Цвет</span><span style={{textAlign:'right'}}>Остаток</span><span style={{textAlign:'right'}}>шт/день</span><span style={{textAlign:'right'}}>Статус</span>
                         </div>
-                        {PRODUCTS.map(prod => {
-                          const spd = DAILY_SALES[prod] || 0
-                          if (spd < 0.3) return null
-                          const qty = getStock(wh.id, prod)
-                          const d = daysLeft(wh.id, prod)
-                          const recQty = Math.max(0, Math.ceil(spd * 14 - qty))
+                        {PRODUCTS.map(prod=>{
+                          const spd=DAILY[prod]||0
+                          if(spd<0.3) return null
+                          const qty=getStock(wh.id,prod)
+                          const d=daysLeft(wh.id,prod)
+                          const recQty=Math.max(0,Math.ceil(spd*14-qty))
                           let statusEl
-                          if (qty === 0 || d <= 3) {
-                            statusEl = <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 5, background: '#FCEBEB', color: '#A32D2D', whiteSpace: 'nowrap' }}>🔴 {qty === 0 ? 'нет' : `${d}дн +${fmt(recQty)}`}</span>
-                          } else if (d <= 7) {
-                            statusEl = <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 5, background: '#FAEEDA', color: '#854F0B', whiteSpace: 'nowrap' }}>🟡 {d}дн +{fmt(recQty)}</span>
-                          } else {
-                            statusEl = <span style={{ fontSize: 10, color: '#3B6D11' }}>{d}дн</span>
+                          if(qty===0||d<=3){
+                            statusEl=<span style={{fontSize:10,padding:'1px 6px',borderRadius:5,background:'#EED4DD',color:'#6A1030',fontWeight:800,whiteSpace:'nowrap'}}>{qty===0?'нет':`${d}дн +${fmt(recQty)}`}</span>
+                          }else if(d<=7){
+                            statusEl=<span style={{fontSize:10,padding:'1px 6px',borderRadius:5,background:'#EEE4C8',color:'#6A4A10',fontWeight:800,whiteSpace:'nowrap'}}>{d}дн +{fmt(recQty)}</span>
+                          }else{
+                            statusEl=<span style={{fontSize:11,color:'#1A6B28',fontWeight:800}}>{d}дн</span>
                           }
                           return (
-                            <div key={prod} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 4, padding: '4px 0', borderBottom: '1px solid #f9f9f9', fontSize: 12, alignItems: 'center' }}>
-                              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: PCOL[prod], flexShrink: 0 }}></span>
-                                <span style={{ color: '#555' }}>{PLBL[prod]}</span>
+                            <div key={prod} style={{display:'grid',gridTemplateColumns:'1fr 50px 60px 80px',gap:4,padding:'4px 0',borderBottom:'0.5px solid rgba(74,111,82,0.06)',fontSize:12,alignItems:'center'}}>
+                              <span style={{display:'flex',alignItems:'center',gap:5}}>
+                                <span style={{width:8,height:8,borderRadius:'50%',background:PCOL[prod],flexShrink:0}}></span>
+                                <span style={{fontWeight:700,color:'#1C2E26'}}>{PLBL[prod]}</span>
                               </span>
-                              <span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(qty)}</span>
-                              <span style={{ textAlign: 'right', color: '#888', fontSize: 11 }}>{fD(spd)}</span>
-                              <span style={{ textAlign: 'right' }}>{statusEl}</span>
+                              <span style={{textAlign:'right',fontVariantNumeric:'tabular-nums',fontWeight:800}}>{fmt(qty)}</span>
+                              <span style={{textAlign:'right',color:'#7A6A5A',fontWeight:600,fontSize:11}}>{spd.toFixed(1)}</span>
+                              <span style={{textAlign:'right'}}>{statusEl}</span>
                             </div>
                           )
                         })}
@@ -269,101 +208,69 @@ export default function Wildberries() {
         </div>
       )}
 
-      {/* ОТГРУЗКИ */}
-      {activeTab === 'shipments' && (
+      {activeTab==='shipments'&&(
         <div>
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '20px 24px', marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 16 }}>Добавить отгрузку на WB</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
-              <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Дата сдачи</div>
-                <input type="date" value={shDate} onChange={e => setShDate(e.target.value)} style={{ width: '100%', padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Тип (цвет)</div>
-                <select value={shType} onChange={e => setShType(e.target.value)} style={{ width: '100%', padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }}>
-                  {PRODUCTS.map(p => <option key={p} value={p}>{p}</option>)}
+          <div className="card" style={{marginBottom:12}}>
+            <div className="card-title">Добавить отгрузку на WB</div>
+            <div className="form-grid fg4" style={{marginBottom:10}}>
+              <div className="form-group"><label className="form-label">Дата сдачи</label><input type="date" value={shDate} onChange={e=>setShDate(e.target.value)}/></div>
+              <div className="form-group"><label className="form-label">Тип (цвет)</label>
+                <select value={shType} onChange={e=>setShType(e.target.value)}>
+                  {PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
-              <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Количество</div>
-                <input type="number" value={shQty} onChange={e => setShQty(e.target.value)} placeholder="0" style={{ width: '100%', padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Склад WB</div>
-                <select value={shWh} onChange={e => setShWh(e.target.value)} style={{ width: '100%', padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }}>
-                  {WAREHOUSES.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+              <div className="form-group"><label className="form-label">Количество</label><input type="number" value={shQty} onChange={e=>setShQty(e.target.value)} placeholder="0"/></div>
+              <div className="form-group"><label className="form-label">Склад WB</label>
+                <select value={shWh} onChange={e=>setShWh(e.target.value)}>
+                  {WHS.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
                 </select>
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
-              <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>ТК</div>
-                <input type="text" value={shTk} onChange={e => setShTk(e.target.value)} style={{ width: '100%', padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>№ Накладной</div>
-                <input type="text" value={shNakl} onChange={e => setShNakl(e.target.value)} placeholder="10..." style={{ width: '100%', padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Дата прихода на WB</div>
-                <input type="date" value={shArrival} onChange={e => setShArrival(e.target.value)} style={{ width: '100%', padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} />
-              </div>
+            <div className="form-grid fg3" style={{marginBottom:10}}>
+              <div className="form-group"><label className="form-label">ТК</label><input type="text" value={shTk} onChange={e=>setShTk(e.target.value)}/></div>
+              <div className="form-group"><label className="form-label">№ Накладной</label><input type="text" value={shNakl} onChange={e=>setShNakl(e.target.value)} placeholder="10..."/></div>
+              <div className="form-group"><label className="form-label">Дата прихода на WB</label><input type="date" value={shArrival} onChange={e=>setShArrival(e.target.value)}/></div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
-              <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>№ Поставки WB</div>
-                <input type="text" value={shWbNum} onChange={e => setShWbNum(e.target.value)} placeholder="WB_1..." style={{ width: '100%', padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>ШК Короба</div>
-                <input type="text" value={shShk} onChange={e => setShShk(e.target.value)} placeholder="WB_14..." style={{ width: '100%', padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>ШК Поставки</div>
-                <input type="text" value={shShkp} onChange={e => setShShkp(e.target.value)} placeholder="WB-GI-..." style={{ width: '100%', padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} />
-              </div>
+            <div className="form-grid fg3" style={{marginBottom:12}}>
+              <div className="form-group"><label className="form-label">№ Поставки WB</label><input type="text" value={shWbNum} onChange={e=>setShWbNum(e.target.value)} placeholder="WB_1..."/></div>
+              <div className="form-group"><label className="form-label">ШК Короба</label><input type="text" value={shShk} onChange={e=>setShShk(e.target.value)} placeholder="WB_14..."/></div>
+              <div className="form-group"><label className="form-label">ШК Поставки</label><input type="text" value={shShkp} onChange={e=>setShShkp(e.target.value)} placeholder="WB-GI-..."/></div>
             </div>
-            <button onClick={addShipment} style={{ background: '#378ADD', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, cursor: 'pointer' }}>Добавить отгрузку</button>
-            {shFb && <div style={{ fontSize: 12, color: '#085041', marginTop: 8 }}>{shFb}</div>}
+            <button onClick={addShipment} className="btn btn-primary">Добавить отгрузку</button>
+            {shFb&&<div className="mt-8 text-green text-sm" style={{fontWeight:700}}>{shFb}</div>}
           </div>
-
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 900 }}>
+          <div className="table-wrap">
+            <table>
               <thead>
-                <tr style={{ background: '#f9fafb' }}>
-                  {['Дата', 'Тип', 'Кол-во', 'Направление', 'ТК', '№ Накладной', '№ Поставки WB', 'ШК Короба', 'ШК Поставки', 'Приход WB', 'Статус'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '8px 10px', color: '#888', fontWeight: 400, borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{h}</th>
-                  ))}
+                <tr>
+                  <th>Дата</th><th>Тип</th><th style={{textAlign:'right'}}>Кол-во</th>
+                  <th>Направление</th><th>ТК</th><th>№ Накладной</th>
+                  <th>№ Поставки WB</th><th>ШК Короба</th><th>Приход WB</th><th>Статус</th>
                 </tr>
               </thead>
               <tbody>
-                {shipments.map(s => {
-                  let badge
-                  if (s.status === 'Доставлено') badge = { bg: '#EAF3DE', color: '#3B6D11' }
-                  else if (s.status === 'В пути') badge = { bg: '#E6F1FB', color: '#185FA5' }
-                  else badge = { bg: '#FAEEDA', color: '#854F0B' }
+                {shipments.map(s=>{
+                  const isPlan=s.arrival_date&&new Date(s.arrival_date)<new Date()&&s.status==='В пути'
                   return (
                     <tr key={s.id}>
-                      <td style={{ padding: '7px 10px', borderBottom: '1px solid #f5f5f5', color: '#888', whiteSpace: 'nowrap' }}>
-                        {s.ship_date ? new Date(s.ship_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : '—'}
+                      <td className="text-muted">{s.ship_date?new Date(s.ship_date).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—'}</td>
+                      <td><span style={{display:'inline-flex',alignItems:'center',gap:5,fontWeight:700}}>
+                        <span style={{width:7,height:7,borderRadius:'50%',background:PCOL[s.product]||'#888'}}></span>
+                        {PLBL[s.product]||s.product}
+                      </span></td>
+                      <td style={{textAlign:'right',fontWeight:800}}>{fmt(s.quantity)}</td>
+                      <td style={{fontWeight:600}}>{s.warehouse}</td>
+                      <td className="text-muted">{s.tk}</td>
+                      <td className="text-muted" style={{fontSize:11}}>{s.invoice_num||'—'}</td>
+                      <td className="text-muted" style={{fontSize:11}}>{s.wb_supply_num||'—'}</td>
+                      <td className="text-muted" style={{fontSize:11}}>{s.shk_box||'—'}</td>
+                      <td style={{color:isPlan?'#6A1030':'#3A2A1A',fontWeight:isPlan?700:500,fontSize:11}}>
+                        {s.arrival_date?new Date(s.arrival_date).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—'}
+                        {isPlan&&' ⚠'}
                       </td>
-                      <td style={{ padding: '7px 10px', borderBottom: '1px solid #f5f5f5', whiteSpace: 'nowrap' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: PCOL[s.product] || '#888' }}></span>
-                          {PLBL[s.product] || s.product}
-                        </span>
-                      </td>
-                      <td style={{ padding: '7px 10px', borderBottom: '1px solid #f5f5f5' }}>{fmt(s.quantity)}</td>
-                      <td style={{ padding: '7px 10px', borderBottom: '1px solid #f5f5f5', color: '#555' }}>{s.warehouse}</td>
-                      <td style={{ padding: '7px 10px', borderBottom: '1px solid #f5f5f5', color: '#888' }}>{s.tk}</td>
-                      <td style={{ padding: '7px 10px', borderBottom: '1px solid #f5f5f5', color: '#888', fontSize: 11 }}>{s.invoice_num || '—'}</td>
-                      <td style={{ padding: '7px 10px', borderBottom: '1px solid #f5f5f5', color: '#888', fontSize: 11 }}>{s.wb_supply_num || '—'}</td>
-                      <td style={{ padding: '7px 10px', borderBottom: '1px solid #f5f5f5', color: '#888', fontSize: 11 }}>{s.shk_box || '—'}</td>
-                      <td style={{ padding: '7px 10px', borderBottom: '1px solid #f5f5f5', color: '#888', fontSize: 11 }}>{s.shk_supply || '—'}</td>
-                      <td style={{ padding: '7px 10px', borderBottom: '1px solid #f5f5f5', color: '#888', fontSize: 11 }}>{s.arrival_date ? new Date(s.arrival_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : '—'}</td>
-                      <td style={{ padding: '7px 10px', borderBottom: '1px solid #f5f5f5' }}>
-                        <select value={s.status} onChange={e => setShipStatus(s.id, e.target.value)} style={{ fontSize: 11, padding: '2px 6px', borderRadius: 6, border: '1px solid #e5e7eb', background: badge.bg, color: badge.color, cursor: 'pointer' }}>
+                      <td>
+                        <select value={s.status} onChange={e=>setShipStatus(s.id,e.target.value)}
+                          style={{fontSize:11,padding:'3px 6px',borderRadius:6,border:'1px solid rgba(74,111,82,0.25)',background:'#fff',cursor:'pointer',fontWeight:700,color:'#1C2E26'}}>
                           <option value="В пути">В пути</option>
                           <option value="Доставлено">Доставлено</option>
                           <option value="Принято WB">Принято WB</option>
@@ -372,134 +279,112 @@ export default function Wildberries() {
                     </tr>
                   )
                 })}
-                {shipments.length === 0 && (
-                  <tr><td colSpan={11} style={{ textAlign: 'center', padding: 24, color: '#aaa' }}>Нет отгрузок</td></tr>
-                )}
+                {shipments.length===0&&<tr><td colSpan={10} style={{textAlign:'center',padding:32,color:'#7A6A5A'}}>Нет отгрузок</td></tr>}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* ПРОДАЖИ */}
-      {activeTab === 'sales' && (
+      {activeTab==='sales'&&(
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
+          <div className="metrics">
             {[
-              { label: 'Март 2026 (заказы)', value: '1 893', sub: 'лучший месяц' },
-              { label: 'Апрель (14 дн, заказы)', value: '761', sub: 'темп ~1 628/мес' },
-              { label: 'Лидер', value: 'Красный', sub: '78% всех заказов' },
-              { label: 'В день (апрель)', value: '54', sub: 'заказов среднее' },
-            ].map((m, i) => (
-              <div key={i} style={{ background: '#f9fafb', borderRadius: 12, padding: '14px 16px' }}>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>{m.label}</div>
-                <div style={{ fontSize: 20, fontWeight: 600 }}>{m.value}</div>
-                <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{m.sub}</div>
+              {l:'Март 2026 (заказы)',v:'1 893',sub:'лучший месяц'},
+              {l:'Апрель (14 дн)',v:'761',sub:'темп ~1 628/мес'},
+              {l:'Лидер',v:'Красный',sub:'78% всех заказов'},
+              {l:'В день (апрель)',v:'54',sub:'заказов среднее'},
+            ].map((m,i)=>(
+              <div key={i} className="metric-card dark">
+                <div className="metric-label">{m.l}</div>
+                <div className="metric-value" style={{fontSize:20}}>{m.v}</div>
+                <div className="metric-sub">{m.sub}</div>
               </div>
             ))}
           </div>
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, overflow: 'hidden', marginBottom: 8 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+          <div className="table-wrap">
+            <table>
               <thead>
-                <tr style={{ background: '#f9fafb' }}>
-                  {['Месяц', 'Красный', 'Чёрный', 'Белый', 'Цветной', 'Итого (заказы)', 'В день'].map(h => (
-                    <th key={h} style={{ textAlign: h === 'Месяц' ? 'left' : 'right', padding: '8px 12px', color: '#888', fontWeight: 400, borderBottom: '1px solid #e5e7eb' }}>{h}</th>
-                  ))}
+                <tr>
+                  <th>Месяц</th>
+                  <th style={{textAlign:'right'}}>Красный</th><th style={{textAlign:'right'}}>Чёрный</th>
+                  <th style={{textAlign:'right'}}>Белый</th><th style={{textAlign:'right'}}>Цветной</th>
+                  <th style={{textAlign:'right'}}>Итого (заказы)</th><th style={{textAlign:'right'}}>В день</th>
                 </tr>
               </thead>
               <tbody>
                 {[
-                  { m: 'Апрель 2026*', r: 515, b: 164, w: 63, c: 19, days: 14 },
-                  { m: 'Март 2026', r: 1477, b: 336, w: 6, c: 74, days: 31 },
-                  { m: 'Февраль 2026', r: 462, b: 20, w: 0, c: 34, days: 28 },
-                  { m: 'Январь 2026', r: 255, b: 4, w: 0, c: 93, days: 31 },
-                ].map(row => {
-                  const tot = row.r + row.b + row.w + row.c
+                  {m:'Апрель 2026*',r:515,b:164,w:63,c:19,days:14},
+                  {m:'Март 2026',r:1477,b:336,w:6,c:74,days:31},
+                  {m:'Февраль 2026',r:462,b:20,w:0,c:34,days:28},
+                  {m:'Январь 2026',r:255,b:4,w:0,c:93,days:31},
+                ].map(row=>{
+                  const tot=row.r+row.b+row.w+row.c
                   return (
                     <tr key={row.m}>
-                      <td style={{ padding: '7px 12px', borderBottom: '1px solid #f5f5f5' }}>{row.m}</td>
-                      <td style={{ padding: '7px 12px', borderBottom: '1px solid #f5f5f5', textAlign: 'right' }}>{fmt(row.r)}</td>
-                      <td style={{ padding: '7px 12px', borderBottom: '1px solid #f5f5f5', textAlign: 'right' }}>{fmt(row.b)}</td>
-                      <td style={{ padding: '7px 12px', borderBottom: '1px solid #f5f5f5', textAlign: 'right' }}>{fmt(row.w)}</td>
-                      <td style={{ padding: '7px 12px', borderBottom: '1px solid #f5f5f5', textAlign: 'right' }}>{fmt(row.c)}</td>
-                      <td style={{ padding: '7px 12px', borderBottom: '1px solid #f5f5f5', textAlign: 'right', fontWeight: 500 }}>{fmt(tot)}</td>
-                      <td style={{ padding: '7px 12px', borderBottom: '1px solid #f5f5f5', textAlign: 'right', color: '#888' }}>{(tot / row.days).toFixed(1)}</td>
+                      <td style={{fontWeight:700}}>{row.m}</td>
+                      <td style={{textAlign:'right',fontWeight:600}}>{fmt(row.r)}</td>
+                      <td style={{textAlign:'right',fontWeight:600}}>{fmt(row.b)}</td>
+                      <td style={{textAlign:'right',fontWeight:600}}>{fmt(row.w)}</td>
+                      <td style={{textAlign:'right',fontWeight:600}}>{fmt(row.c)}</td>
+                      <td style={{textAlign:'right',fontWeight:800}}>{fmt(tot)}</td>
+                      <td style={{textAlign:'right',color:'#7A6A5A',fontWeight:600}}>{(tot/row.days).toFixed(1)}</td>
                     </tr>
                   )
                 })}
               </tbody>
             </table>
           </div>
-          <div style={{ fontSize: 11, color: '#888', padding: '6px 10px' }}>* Все цифры — заказы (не выкупы). Выкупы ≈ заказы × 47%</div>
+          <div className="info-box mt-8">* Все цифры — заказы (не выкупы). Выкупы ≈ заказы × 47%</div>
         </div>
       )}
 
-      {/* ЦЕЛЬ МЕСЯЦА */}
-      {activeTab === 'goal' && (
-        <div style={{ maxWidth: 500 }}>
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '20px 24px', marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 16 }}>Хочу заработать чистыми</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-              <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Желаемая прибыль, ₽</div>
-                <input type="number" value={goalProfit} onChange={e => setGoalProfit(parseInt(e.target.value))} step="10000" style={{ width: '100%', padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Процент выкупа, %</div>
-                <input type="number" value={goalBuyout} onChange={e => setGoalBuyout(parseInt(e.target.value))} min="1" max="100" style={{ width: '100%', padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} />
-              </div>
+      {activeTab==='goal'&&(
+        <div style={{maxWidth:500}}>
+          <div className="card" style={{marginBottom:12}}>
+            <div className="card-title">Хочу заработать чистыми</div>
+            <div className="form-grid fg2" style={{marginBottom:14}}>
+              <div className="form-group"><label className="form-label">Желаемая прибыль, ₽</label><input type="number" value={goalProfit} onChange={e=>setGoalProfit(parseInt(e.target.value))} step="10000"/></div>
+              <div className="form-group"><label className="form-label">Процент выкупа, %</label><input type="number" value={goalBuyout} onChange={e=>setGoalBuyout(parseInt(e.target.value))} min="1" max="100"/></div>
             </div>
           </div>
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '20px 24px' }}>
+          <div className="card">
             {[
-              { label: 'Нужно заказов на WB', value: fmt(needOrders) + ' шт', accent: true },
-              { label: '▸ Красных (~78%)', value: fmt(Math.ceil(needOrders * 0.78)) + ' шт' },
-              { label: '▸ Чёрных (~9%)', value: fmt(Math.ceil(needOrders * 0.09)) + ' шт' },
-              { label: '▸ Белых (~8%)', value: fmt(Math.ceil(needOrders * 0.08)) + ' шт' },
-              { label: '▸ Цветных (~5%)', value: fmt(Math.ceil(needOrders * 0.05)) + ' шт' },
-              { label: `Нужно выкупов (${goalBuyout}%)`, value: fmt(needSold) + ' шт', accent: true },
-              { label: 'Нужно произвести', value: fmt(needProd) + ' шт' },
-              { label: 'Зарплата швеям (≈)', value: fmt(needProd * 110) + ' ₽' },
-              { label: 'Себест. материалов (≈)', value: fmt(needProd * 58) + ' ₽' },
-              { label: 'Средняя ЧП/шт', value: fmt(avgProfit) + ' ₽' },
-            ].map((r, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f5f5f5', fontSize: 13 }}>
-                <span style={{ color: '#666' }}>{r.label}</span>
-                <span style={{ fontWeight: 500, color: r.accent ? '#1D9E75' : '#111' }}>{r.value}</span>
-              </div>
-            ))}
+              {l:'Нужно заказов на WB',v:fmt(needOrders)+' шт',c:'#1A6B28'},
+              {l:'▸ Красных (~78%)',v:fmt(Math.ceil(needOrders*0.78))+' шт'},
+              {l:'▸ Чёрных (~9%)',v:fmt(Math.ceil(needOrders*0.09))+' шт'},
+              {l:'▸ Белых (~8%)',v:fmt(Math.ceil(needOrders*0.08))+' шт'},
+              {l:'▸ Цветных (~5%)',v:fmt(Math.ceil(needOrders*0.05))+' шт'},
+              {l:`Нужно выкупов (${goalBuyout}%)`,v:fmt(needSold)+' шт',c:'#1A6B28'},
+              {l:'Нужно произвести',v:fmt(needProd)+' шт'},
+              {l:'Зарплата швеям (≈)',v:fmt(needProd*110)+' ₽'},
+              {l:'Себест. материалов (≈)',v:fmt(needProd*58)+' ₽'},
+              {l:'Средняя ЧП/шт',v:fmt(avgProfit)+' ₽'},
+            ].map((r,i)=><Row key={i} label={r.l} value={r.v} color={r.c}/>)}
           </div>
         </div>
       )}
 
-      {/* ОБНОВИТЬ ОСТАТКИ */}
-      {activeTab === 'update' && (
-        <div style={{ maxWidth: 500 }}>
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '20px 24px' }}>
-            <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>Обновить остатки на складах WB</div>
-            <div style={{ fontSize: 12, color: '#888', marginBottom: 16, padding: '8px 10px', background: '#f9fafb', borderRadius: 8 }}>
-              Пока API не подключён — вводите остатки вручную. После подключения API WB будет обновляться автоматически.
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
-              <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Склад WB</div>
-                <select value={upWh} onChange={e => setUpWh(e.target.value)} style={{ width: '100%', padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }}>
-                  {WAREHOUSES.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+      {activeTab==='update'&&(
+        <div style={{maxWidth:480}}>
+          <div className="card">
+            <div className="card-title">Обновить остатки на складах WB</div>
+            <div className="info-box mb-12">Пока API не подключён — вводите вручную. После подключения обновляется автоматически.</div>
+            <div className="form-grid fg3" style={{marginBottom:12}}>
+              <div className="form-group"><label className="form-label">Склад WB</label>
+                <select value={upWh} onChange={e=>setUpWh(e.target.value)}>
+                  {WHS.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
                 </select>
               </div>
-              <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Артикул (цвет)</div>
-                <select value={upProd} onChange={e => setUpProd(e.target.value)} style={{ width: '100%', padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }}>
-                  {PRODUCTS.map(p => <option key={p} value={p}>{p}</option>)}
+              <div className="form-group"><label className="form-label">Артикул (цвет)</label>
+                <select value={upProd} onChange={e=>setUpProd(e.target.value)}>
+                  {PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
-              <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Остаток (шт)</div>
-                <input type="number" value={upQty} onChange={e => setUpQty(e.target.value)} placeholder="0" style={{ width: '100%', padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} />
-              </div>
+              <div className="form-group"><label className="form-label">Остаток (шт)</label><input type="number" value={upQty} onChange={e=>setUpQty(e.target.value)} placeholder="0"/></div>
             </div>
-            <button onClick={updateStock} style={{ background: '#378ADD', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, cursor: 'pointer' }}>Обновить остаток</button>
-            {upFb && <div style={{ fontSize: 12, color: '#085041', marginTop: 8 }}>{upFb}</div>}
+            <button onClick={updateStock} className="btn btn-primary">Обновить остаток</button>
+            {upFb&&<div className="mt-8 text-green text-sm" style={{fontWeight:700}}>{upFb}</div>}
           </div>
         </div>
       )}
