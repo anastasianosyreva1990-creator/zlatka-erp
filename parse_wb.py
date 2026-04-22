@@ -12,9 +12,11 @@ SKUS = {
 results = defaultdict(lambda: {
     'revenue': 0, 'log_sale': 0, 'log_cancel': 0,
     'vv': 0, 'shtraf': 0,
+    'orders': 0,
     'sold': defaultdict(int),
     'to_seller': defaultdict(float),
-    'log_per_sku': defaultdict(float)
+    'log_per_sku': defaultdict(float),
+    'vv_per_sku': defaultdict(float),
 })
 
 reports_dir = '/workspaces/zlatka-erp/wb_reports'
@@ -29,12 +31,6 @@ for item in sorted(os.listdir(reports_dir)):
         fpath = os.path.join(item_path, fname)
         try:
             df = pd.read_excel(fpath, engine='openpyxl')
-            print(f'OK: {fname} ({len(df)} строк)')
-
-            df['month'] = df['Дата продажи'].astype(str).str[:7]
-            df = df[df['month'] >= '2026-01']
-            if df.empty:
-                continue
 
             col_peresl = 'К перечислению Продавцу за реализованный Товар'
             col_log = 'Услуги по доставке товара покупателю'
@@ -44,48 +40,71 @@ for item in sorted(os.listdir(reports_dir)):
             col_qty = 'Кол-во'
             col_sku = 'Код номенклатуры'
             col_logtype = 'Виды логистики, штрафов и корректировок ВВ'
+            col_date = 'Дата продажи'
+
+            df['month'] = df[col_date].astype(str).str[:7]
+            df = df[df['month'] >= '2026-01']
+            if df.empty:
+                continue
 
             for c in [col_peresl, col_log, col_vv, col_shtraf, col_qty]:
                 df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
             df[col_sku] = pd.to_numeric(df[col_sku], errors='coerce').fillna(0).astype(int)
 
-            sales = df[df[col_reason] == 'Продажа']
-            log_sale = df[(df[col_reason] == 'Логистика') & (df[col_logtype] == 'К клиенту при продаже')]
-            log_cancel = df[(df[col_reason] == 'Логистика') & (df[col_logtype] == 'К клиенту при отмене')]
+            # Только кокошники
+            kokosh = df[df[col_sku].isin(SKUS.keys())]
 
+            # Продажи кокошников
+            sales = kokosh[kokosh[col_reason] == 'Продажа']
             for month, grp in sales.groupby('month'):
                 results[month]['revenue'] += grp[col_peresl].sum()
                 results[month]['vv'] += grp[col_vv].abs().sum()
                 results[month]['shtraf'] += grp[col_shtraf].abs().sum()
+                results[month]['orders'] += len(grp)
                 for sku_id, color in SKUS.items():
                     sku_rows = grp[(grp[col_sku] == sku_id) & (grp[col_qty] > 0)]
                     if not sku_rows.empty:
                         results[month]['sold'][color] += int(sku_rows[col_qty].sum())
                         results[month]['to_seller'][color] += sku_rows[col_peresl].sum()
-                        results[month]['log_per_sku'][color] += sku_rows[col_log].sum()
+                        results[month]['vv_per_sku'][color] += sku_rows[col_vv].abs().sum()
 
+            # Логистика кокошников при продажах
+            log_sale = kokosh[(kokosh[col_reason] == 'Логистика') & (kokosh[col_logtype] == 'К клиенту при продаже')]
             for month, grp in log_sale.groupby('month'):
                 results[month]['log_sale'] += grp[col_log].sum()
+                for sku_id, color in SKUS.items():
+                    sku_rows = grp[grp[col_sku] == sku_id]
+                    if not sku_rows.empty:
+                        results[month]['log_per_sku'][color] += sku_rows[col_log].sum()
 
+            # Логистика кокошников при отменах
+            log_cancel = kokosh[(kokosh[col_reason] == 'Логистика') & (kokosh[col_logtype] == 'К клиенту при отмене')]
             for month, grp in log_cancel.groupby('month'):
                 results[month]['log_cancel'] += grp[col_log].sum()
 
+            print(f'OK: {fname}')
         except Exception as e:
             print(f'Ошибка {fname}: {e}')
 
-print('\n=== РЕЗУЛЬТАТЫ ПО МЕСЯЦАМ ===\n')
+print('\n=== РЕЗУЛЬТАТЫ ПО МЕСЯЦАМ (только кокошники) ===\n')
 for month in sorted(results.keys()):
     r = results[month]
+    total_sold = sum(r['sold'].values())
+    buyout = total_sold / r['orders'] * 100 if r['orders'] > 0 else 0
     print(f'--- {month} ---')
+    print(f'  Заказов:     {r["orders"]}')
+    print(f'  Выкупов:     {total_sold}')
+    print(f'  % выкупа:    {buyout:.1f}%')
     print(f'  Выручка:     {r["revenue"]:>12,.0f} ₽')
     print(f'  Лог.продажи: {r["log_sale"]:>12,.0f} ₽')
     print(f'  Лог.отмены:  {r["log_cancel"]:>12,.0f} ₽')
     print(f'  Комиссия ВВ: {r["vv"]:>12,.0f} ₽')
-    print(f'  Штрафы:      {r["shtraf"]:>12,.0f} ₽')
     for color in ['Красный', 'Белый', 'Черный', 'Цветной']:
         sold = r['sold'][color]
         if sold > 0:
             avg = r['to_seller'][color] / sold
-            log_avg = r['log_per_sku'][color] / sold
-            print(f'  {color}: {sold} шт, ср.выручка {avg:.0f}₽, ср.лог {log_avg:.0f}₽')
+            log_avg = r['log_per_sku'][color] / sold if r['log_per_sku'][color] > 0 else 0
+            vv_avg = r['vv_per_sku'][color] / sold
+            print(f'  {color}: {sold} шт | к перечисл. {avg:.0f}₽ | лог {log_avg:.0f}₽ | ВВ {vv_avg:.0f}₽')
     print()
+    
