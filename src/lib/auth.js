@@ -10,31 +10,11 @@ export async function signOut() {
   await supabase.auth.signOut()
 }
 
-export async function getProfile() {
-  try {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
-
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*, sewers(*)')
-      .eq('id', user.id)
-      .single()
-
-    if (error) {
-      console.error('Profile error:', error)
-      // Если профиль не найден — возвращаем дефолтный админ профиль
-      return { id: user.id, role: 'admin', name: user.email }
-    }
-
-    return profile
-  } catch (e) {
-    console.error('Auth error:', e)
-    return null
-  }
-}
-
-export async function getCurrentUser() {
-  const { data: { user } } = await supabase.auth.getUser()
-  return user
+export async function getRole(userId) {
+  const { data } = await supabase
+    .from('profiles')
+    .select('role, sewer_id, sewers(*)')
+    .eq('id', userId)
+    .single()
+  return data
 }
