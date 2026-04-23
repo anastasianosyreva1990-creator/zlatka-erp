@@ -1,0 +1,18 @@
+name: Update WB Orders
+on:
+  schedule:
+    - cron: '0 6 * * *'  # каждый день в 6:00 UTC (9:00 МСК)
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: pip install requests supabase
+      - run: python3 update_orders.py
+        env:
+          VITE_WB_TOKEN: ${{ secrets.WB_TOKEN }}

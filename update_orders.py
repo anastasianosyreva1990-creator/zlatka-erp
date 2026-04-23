@@ -5,7 +5,7 @@ from supabase import create_client
 
 SUPABASE_URL = 'https://eqakagcbrzqfbsrgzaeh.supabase.co'
 SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxYWthZ2NicnpxZmJzcmd6YWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MTQ4NzgsImV4cCI6MjA5MTk5MDg3OH0.Hgv8sVv4lctRLzxbrsvYt8kg-IRKVeRMjXl6fq9Ytew'
-WB_TOKEN = open('/workspaces/zlatka-erp/.env').read().split('VITE_WB_TOKEN=')[1].strip()
+WB_TOKEN = os.environ.get('VITE_WB_TOKEN') or open('/workspaces/zlatka-erp/.env').read().split('VITE_WB_TOKEN=')[1].strip()
 
 SKUS = {
     539619113: 'red',
