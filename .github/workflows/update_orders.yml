@@ -13,6 +13,8 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install requests supabase
-      - run: python3 update_orders.py
+      - - run: python3 update_orders.py
+        env:
+          WB_TOKEN: ${{ secrets.WB_TOKEN }}
         env:
           VITE_WB_TOKEN: ${{ secrets.WB_TOKEN }}
