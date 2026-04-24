@@ -32,8 +32,6 @@ export default function Wildberries(){
   const [orders,setOrders]=useState([])
   const [loading,setLoading]=useState(true)
   const [activeTab,setActiveTab]=useState('signals')
-
-  // Форма отгрузки
   const [shDate,setShDate]=useState(new Date().toISOString().split('T')[0])
   const [shType,setShType]=useState('Кокошник Красный')
   const [shQty,setShQty]=useState('')
@@ -43,20 +41,13 @@ export default function Wildberries(){
   const [shArrival,setShArrival]=useState('')
   const [shWbNum,setShWbNum]=useState('')
   const [shShk,setShShk]=useState('')
-  const [shShkp,setShShkp]=useState('')
   const [shFb,setShFb]=useState('')
-
-  // Форма заказов
-  const [ordDate,setOrdDate]=useState(() => {
-    const d = new Date(); d.setDate(d.getDate()-1); return d.toISOString().split('T')[0]
-  })
+  const [ordDate,setOrdDate]=useState(()=>{const d=new Date();d.setDate(d.getDate()-1);return d.toISOString().split('T')[0]})
   const [ordRed,setOrdRed]=useState('')
   const [ordWhite,setOrdWhite]=useState('')
   const [ordBlack,setOrdBlack]=useState('')
   const [ordColor,setOrdColor]=useState('')
   const [ordFb,setOrdFb]=useState('')
-
-  // Просмотр заказов
   const [selMonth,setSelMonth]=useState('2026-04')
 
   useEffect(()=>{loadAll()},[])
@@ -75,30 +66,32 @@ export default function Wildberries(){
   function getStock(whId,prod){return wbStocks.find(s=>s.warehouse===whId&&s.product===prod)?.quantity||0}
   function daysLeft(whId,prod){const qty=getStock(whId,prod);const spd=DAILY[prod]||1;return Math.floor(qty/spd)}
 
+  // Суммарные остатки по всем складам
+  function getTotalStock(prod){return WHS.reduce((a,wh)=>a+getStock(wh.id,prod),0)}
+
   async function addShipment(){
     if(!shQty||!shDate){setShFb('Заполните дату и количество');return}
     const wh=WHS.find(w=>w.id===shWh)
     await supabase.from('shipments').insert({
       ship_date:shDate,product:shType,quantity:parseInt(shQty),
       warehouse:wh?.name||shWh,tk:shTk,invoice_num:shNakl,
-      wb_supply_num:shWbNum,shk_box:shShk,shk_supply:shShkp,
+      wb_supply_num:shWbNum,shk_box:shShk,
       arrival_date:shArrival||null,status:'В пути'
     })
     setShFb(`✓ Отгрузка: ${PLBL[shType]} → ${wh?.name} ${shQty} шт`)
-    setShQty('');setShNakl('');setShWbNum('');setShShk('');setShShkp('')
+    setShQty('');setShNakl('');setShWbNum('');setShShk('')
     loadAll()
   }
 
   async function saveOrders(){
     if(!ordDate){setOrdFb('Укажите дату');return}
-    const row = {
-      date: ordDate,
-      red: parseInt(ordRed)||0,
-      white: parseInt(ordWhite)||0,
-      black: parseInt(ordBlack)||0,
-      color: parseInt(ordColor)||0,
-    }
-    await supabase.from('wb_orders').upsert(row, {onConflict:'date'})
+    await supabase.from('wb_orders').upsert({
+      date:ordDate,
+      red:parseInt(ordRed)||0,
+      white:parseInt(ordWhite)||0,
+      black:parseInt(ordBlack)||0,
+      color:parseInt(ordColor)||0,
+    },{onConflict:'date'})
     setOrdFb(`✓ Сохранено за ${new Date(ordDate).toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}`)
     setOrdRed('');setOrdWhite('');setOrdBlack('');setOrdColor('')
     loadAll()
@@ -114,22 +107,20 @@ export default function Wildberries(){
   let defCount=0
   WHS.forEach(wh=>PRODUCTS.forEach(prod=>{if(DAILY[prod]>0.5&&daysLeft(wh.id,prod)<=3)defCount++}))
 
-  if(loading) return <div style={{padding:40,color:'#5A4A3A'}}>Загрузка...</div>
-
-  // Данные для таблицы заказов по месяцу
-  const monthOrders = orders.filter(o => o.date?.startsWith(selMonth))
-  const daysInMonth = new Date(parseInt(selMonth.split('-')[0]), parseInt(selMonth.split('-')[1]), 0).getDate()
-  const days = Array.from({length: daysInMonth}, (_, i) => i + 1)
-
-  // Итоги по месяцу
-  const monthTotals = {
-    red: monthOrders.reduce((a,o)=>a+o.red,0),
-    white: monthOrders.reduce((a,o)=>a+o.white,0),
-    black: monthOrders.reduce((a,o)=>a+o.black,0),
-    color: monthOrders.reduce((a,o)=>a+o.color,0),
+  const monthOrders=orders.filter(o=>o.date?.startsWith(selMonth))
+  const daysInMonth=new Date(parseInt(selMonth.split('-')[0]),parseInt(selMonth.split('-')[1]),0).getDate()
+  const days=Array.from({length:daysInMonth},(_,i)=>i+1)
+  const monthTotals={
+    red:monthOrders.reduce((a,o)=>a+o.red,0),
+    white:monthOrders.reduce((a,o)=>a+o.white,0),
+    black:monthOrders.reduce((a,o)=>a+o.black,0),
+    color:monthOrders.reduce((a,o)=>a+o.color,0),
   }
-  monthTotals.total = monthTotals.red+monthTotals.white+monthTotals.black+monthTotals.color
-  const avgPerDay = monthOrders.length > 0 ? Math.round(monthTotals.total/monthOrders.filter(o=>o.red+o.white+o.black+o.color>0).length) : 0
+  monthTotals.total=monthTotals.red+monthTotals.white+monthTotals.black+monthTotals.color
+  const avgPerDay=monthOrders.filter(o=>o.red+o.white+o.black+o.color>0).length>0
+    ?Math.round(monthTotals.total/monthOrders.filter(o=>o.red+o.white+o.black+o.color>0).length):0
+
+  if(loading) return <div style={{padding:40,color:'#5A4A3A'}}>Загрузка...</div>
 
   const TabBtn=({id,label})=>(
     <button onClick={()=>setActiveTab(id)} style={{
@@ -174,6 +165,28 @@ export default function Wildberries(){
       {/* СИГНАЛЫ */}
       {activeTab==='signals'&&(
         <div>
+          {/* Суммарные остатки по всем складам */}
+          <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',padding:'14px 18px',marginBottom:16}}>
+            <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,textTransform:'uppercase',letterSpacing:0.5,marginBottom:10}}>Итого на всех складах WB</div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
+              {PRODUCTS.map(prod=>{
+                const total=getTotalStock(prod)
+                const days=DAILY[prod]>0?Math.floor(total/DAILY[prod]):0
+                return (
+                  <div key={prod} style={{background:'#F5F0E8',borderRadius:8,padding:'10px 12px'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                      <span style={{width:8,height:8,borderRadius:'50%',background:PCOL[prod]}}></span>
+                      <span style={{fontSize:12,fontWeight:700,color:'#1C2E26'}}>{PLBL[prod]}</span>
+                    </div>
+                    <div style={{fontSize:20,fontWeight:800,color:'#1C2E26'}}>{fmt(total)} шт</div>
+                    <div style={{fontSize:11,color:'#7A6A5A',marginTop:2}}>~{days} дней</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Склады по ФО */}
           {Object.entries(foGroups).map(([fo,whs])=>(
             <div key={fo} style={{marginBottom:20}}>
               <div style={{fontSize:10,color:'#5A4A3A',textTransform:'uppercase',letterSpacing:1,marginBottom:10,fontWeight:800}}>{fo} ФО</div>
@@ -242,7 +255,6 @@ export default function Wildberries(){
       {/* ЗАКАЗЫ */}
       {activeTab==='orders'&&(
         <div>
-          {/* Форма ввода */}
           <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',padding:'16px 18px',marginBottom:16}}>
             <div style={{fontSize:14,fontWeight:800,color:'#1C2E26',marginBottom:12}}>Внести заказы за день</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr',gap:10,marginBottom:12}}>
@@ -262,8 +274,7 @@ export default function Wildberries(){
                     <span style={{width:8,height:8,borderRadius:'50%',background:f.color,display:'inline-block'}}></span>
                     {f.label}
                   </div>
-                  <input type="number" value={f.val} onChange={e=>f.set(e.target.value)}
-                    placeholder="0" min="0"
+                  <input type="number" value={f.val} onChange={e=>f.set(e.target.value)} placeholder="0" min="0"
                     style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13}}/>
                 </div>
               ))}
@@ -276,7 +287,6 @@ export default function Wildberries(){
             </div>
           </div>
 
-          {/* Выбор месяца */}
           <div style={{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap'}}>
             {MONTHS.map(m=>(
               <button key={m} onClick={()=>setSelMonth(m)} style={{
@@ -288,7 +298,6 @@ export default function Wildberries(){
             ))}
           </div>
 
-          {/* Метрики месяца */}
           <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10,marginBottom:14}}>
             {[
               {label:'Красный',value:monthTotals.red,color:'#C0392B'},
@@ -307,7 +316,6 @@ export default function Wildberries(){
             ))}
           </div>
 
-          {/* Таблица — строки=цвета, столбцы=дни */}
           <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',overflow:'auto'}}>
             <table style={{borderCollapse:'collapse',fontSize:11,minWidth:900}}>
               <thead>
@@ -326,7 +334,7 @@ export default function Wildberries(){
                   {label:'Черный',key:'black',color:'#2C3E50'},
                   {label:'Цветной',key:'color',color:'#27AE60'},
                 ].map((row,ri)=>{
-                  const rowTotal = monthOrders.reduce((a,o)=>a+o[row.key],0)
+                  const rowTotal=monthOrders.reduce((a,o)=>a+o[row.key],0)
                   return (
                     <tr key={row.key} style={{background:ri%2===0?'#FAFAF8':'#fff'}}>
                       <td style={{padding:'7px 10px',fontWeight:700,color:row.color,position:'sticky',left:0,background:ri%2===0?'#FAFAF8':'#fff',borderRight:'1px solid rgba(74,111,82,0.1)'}}>
@@ -336,9 +344,9 @@ export default function Wildberries(){
                         </span>
                       </td>
                       {days.map(d=>{
-                        const dateStr = `${selMonth}-${String(d).padStart(2,'0')}`
-                        const ord = monthOrders.find(o=>o.date===dateStr)
-                        const val = ord?ord[row.key]:null
+                        const dateStr=`${selMonth}-${String(d).padStart(2,'0')}`
+                        const ord=monthOrders.find(o=>o.date===dateStr)
+                        const val=ord?ord[row.key]:null
                         return (
                           <td key={d} style={{padding:'6px 4px',textAlign:'center',borderBottom:'0.5px solid rgba(74,111,82,0.05)',color:val>0?'#1C2E26':'#D5CEC5',fontWeight:val>0?700:400}}>
                             {val!==null?val:'·'}
@@ -349,13 +357,12 @@ export default function Wildberries(){
                     </tr>
                   )
                 })}
-                {/* Итого по дням */}
                 <tr style={{background:'#F5F0E8',fontWeight:800}}>
                   <td style={{padding:'7px 10px',fontWeight:800,color:'#1C2E26',position:'sticky',left:0,background:'#F5F0E8',borderRight:'1px solid rgba(74,111,82,0.1)',borderTop:'1px solid rgba(196,168,130,0.2)'}}>Итого</td>
                   {days.map(d=>{
-                    const dateStr = `${selMonth}-${String(d).padStart(2,'0')}`
-                    const ord = monthOrders.find(o=>o.date===dateStr)
-                    const total = ord?(ord.red+ord.white+ord.black+ord.color):null
+                    const dateStr=`${selMonth}-${String(d).padStart(2,'0')}`
+                    const ord=monthOrders.find(o=>o.date===dateStr)
+                    const total=ord?(ord.red+ord.white+ord.black+ord.color):null
                     return (
                       <td key={d} style={{padding:'6px 4px',textAlign:'center',borderTop:'1px solid rgba(196,168,130,0.2)',color:total>0?'#1C2E26':'#D5CEC5',fontWeight:total>0?800:400}}>
                         {total!==null?total:'·'}
@@ -490,7 +497,7 @@ export default function Wildberries(){
           <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',padding:'16px 18px'}}>
             <div style={{fontSize:14,fontWeight:800,color:'#1C2E26',marginBottom:8}}>Обновить остатки на складах WB</div>
             <div style={{fontSize:12,color:'#7A6A5A',marginBottom:16,padding:'8px 12px',background:'#F5F0E8',borderRadius:8}}>
-              Пока API не подключён — вводите вручную. После подключения обновляется автоматически.
+              Пока API не подключён — вводите вручную.
             </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:12}}>
               <div>

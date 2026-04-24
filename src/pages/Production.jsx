@@ -6,7 +6,6 @@ const PCOL = {'Кокошник Красный':'#C0392B','Кокошник Бе
 const PLBL = {'Кокошник Красный':'Красный','Кокошник Белый':'Белый','Кокошник Черный':'Чёрный','Кокошник Цветной':'Цветной'}
 const PRODUCTS = Object.keys(PCOL)
 
-// Материалы которые бывают у швей (без упаковочных)
 const SEWER_MATS = ['Кожа Белая','Кожа Красная','Кожа Черная','Габардин Цветной','Резинка Черная','Резинка Белая','Регулятор Белый','Регулятор Черный','Основа пластиковая']
 
 const NORM = {
@@ -28,7 +27,7 @@ export default function Production() {
   const [materials, setMaterials] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('main')
-  const [popup, setPopup] = useState(null) // {type: 'vezti'|'history'|'op', sewer}
+  const [popup, setPopup] = useState(null)
   const [opType, setOpType] = useState('receive')
   const [opMat, setOpMat] = useState('')
   const [opQty, setOpQty] = useState('')
@@ -58,22 +57,6 @@ export default function Production() {
     return stocks.filter(s => s.location === sewerId && SEWER_MATS.includes(s.materials?.name))
   }
 
-  function getWarehouseStocks() {
-    return stocks.filter(s => s.location === 'warehouse')
-  }
-
-  function calcOutput(matName, qty) {
-    const info = NORM[matName]
-    if (!info || !info.norm) return 0
-    return Math.floor(qty / info.norm)
-  }
-
-  function calcNeed(matName, weeklyCapacity) {
-    const info = NORM[matName]
-    if (!info) return 0
-    return Math.max(0, Math.ceil(weeklyCapacity * info.norm))
-  }
-
   async function submitOp() {
     if (!popup?.sewer) return
     const sewer = popup.sewer
@@ -86,20 +69,17 @@ export default function Production() {
       } else {
         await supabase.from('material_stock').insert({ material_id: opMat, location: sewer.id, quantity: qty })
       }
-      setOpFb(`✓ Выдано материала ${qty}`)
+      setOpFb(`✓ Выдано`)
       setOpQty('')
     }
 
     if (opType === 'submit' && opProd && opQtyP) {
       const qty = parseInt(opQtyP)
       await supabase.from('productions').insert({
-        sewer_id: sewer.id,
-        product: opProd,
-        quantity: qty,
+        sewer_id: sewer.id, product: opProd, quantity: qty,
         date: new Date().toISOString().split('T')[0],
         earned: qty * sewer.tariff
       })
-      // Списываем материалы
       for (const [matName, info] of Object.entries(NORM)) {
         if (!info.products.includes(opProd)) continue
         const stock = stocks.find(s => s.location === sewer.id && s.materials?.name === matName)
@@ -109,10 +89,9 @@ export default function Production() {
           }).eq('id', stock.id)
         }
       }
-      setOpFb(`✓ Принято ${qty} шт ${PLBL[opProd]}`)
+      setOpFb(`✓ Принято ${qty} шт`)
       setOpQtyP('')
     }
-
     loadAll()
   }
 
@@ -127,11 +106,15 @@ export default function Production() {
 
   if (loading) return <div style={{ padding: 40, color: '#5A4A3A' }}>Загрузка...</div>
 
-  const totalProduced = productions.filter(p => p.date?.startsWith('2026-04')).reduce((a, p) => a + p.quantity, 0)
-  const totalSalary = productions.filter(p => p.date?.startsWith('2026-04')).reduce((a, p) => a + p.quantity * (p.sewers ? sewers.find(s => s.name === p.sewers.name)?.tariff || 0 : 0), 0)
+  const monthPfx = '2026-04'
+  const totalProduced = productions.filter(p => p.date?.startsWith(monthPfx)).reduce((a, p) => a + p.quantity, 0)
+  const totalSalary = productions.filter(p => p.date?.startsWith(monthPfx)).reduce((a, p) => {
+    const sw = sewers.find(s => s.id === p.sewer_id)
+    return a + p.quantity * (sw?.tariff || 0)
+  }, 0)
   const leader = sewers.map(sw => ({
     name: sw.name,
-    qty: productions.filter(p => p.sewer_id === sw.id && p.date?.startsWith('2026-04')).reduce((a, p) => a + p.quantity, 0)
+    qty: productions.filter(p => p.sewer_id === sw.id && p.date?.startsWith(monthPfx)).reduce((a, p) => a + p.quantity, 0)
   })).sort((a, b) => b.qty - a.qty)[0]
 
   return (
@@ -140,7 +123,6 @@ export default function Production() {
         Производство / <span style={{ color: '#C4A882' }}>Швеи</span>
       </h1>
 
-      {/* Метрики */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
         {[
           { label: 'Произведено в месяце', value: fmt(totalProduced) + ' кокошников' },
@@ -156,50 +138,58 @@ export default function Production() {
         ))}
       </div>
 
-      {/* Табы */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
         <TabBtn id="main" label="Главная"/>
         <TabBtn id="stock" label="Сводный склад"/>
         <TabBtn id="history" label="История"/>
       </div>
 
-      {/* ГЛАВНАЯ — карточки швей */}
       {activeTab === 'main' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 16 }}>
           {sewers.map(sw => {
             const sewerStocks = getSewerStocks(sw.id)
-            const monthProds = productions.filter(p => p.sewer_id === sw.id && p.date?.startsWith('2026-04'))
-            const monthQty = monthProds.reduce((a, p) => a + p.quantity, 0)
+            const monthQty = productions.filter(p => p.sewer_id === sw.id && p.date?.startsWith(monthPfx)).reduce((a, p) => a + p.quantity, 0)
             const monthEarned = monthQty * sw.tariff
 
             return (
-              <div key={sw.id} style={{ background: '#1C2E26', borderRadius: 14, overflow: 'hidden' }}>
+              <div key={sw.id} style={{ background: '#fff', borderRadius: 14, border: '0.5px solid rgba(74,111,82,0.2)', overflow: 'hidden', boxShadow: '0 1px 4px rgba(28,46,38,0.06)' }}>
                 {/* Шапка */}
-                <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#C4A882', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, color: '#1C2E26', flexShrink: 0 }}>
-                    {sw.name.split(' ').map(w => w[0]).join('')}
+                <div style={{ background: '#1C2E26', padding: '10px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#C4A882', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, color: '#1C2E26', flexShrink: 0 }}>
+                      {sw.name.split(' ').map(w => w[0]).join('')}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: 13, color: '#F2EBE0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sw.name}</div>
+                      <div style={{ fontSize: 10, color: 'rgba(196,168,130,0.7)', whiteSpace: 'nowrap' }}>{sw.tariff} ₽/шт · {sw.weekly_capacity} шт/нед</div>
+                    </div>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 800, fontSize: 14, color: '#F2EBE0' }}>{sw.name}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(196,168,130,0.7)' }}>{sw.tariff} ₽/шт · {sw.weekly_capacity} шт/нед</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => setPopup({ type: 'vezti', sewer: sw })}
+                      style={{ flex: 1, fontSize: 11, padding: '4px 8px', borderRadius: 8, border: '1px solid rgba(196,168,130,0.5)', background: 'rgba(196,168,130,0.15)', color: '#C4A882', cursor: 'pointer', fontWeight: 700 }}>
+                      ↗ Везти
+                    </button>
+                    <button onClick={() => { setPopup({ type: 'op', sewer: sw }); setOpFb('') }}
+                      style={{ flex: 1, fontSize: 11, padding: '4px 8px', borderRadius: 8, border: '1px solid rgba(196,168,130,0.3)', background: 'transparent', color: 'rgba(196,168,130,0.8)', cursor: 'pointer', fontWeight: 700 }}>
+                      Операция
+                    </button>
+                    <button onClick={() => setPopup({ type: 'history', sewer: sw })}
+                      style={{ flex: 1, fontSize: 11, padding: '4px 8px', borderRadius: 8, border: '1px solid rgba(196,168,130,0.2)', background: 'transparent', color: 'rgba(196,168,130,0.6)', cursor: 'pointer', fontWeight: 700 }}>
+                      История
+                    </button>
                   </div>
-                  <button onClick={() => { setPopup({ type: 'op', sewer: sw }); setOpFb('') }}
-                    style={{ fontSize: 11, padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(196,168,130,0.4)', background: 'rgba(196,168,130,0.15)', color: '#C4A882', cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                    Операция
-                  </button>
-                  <button onClick={() => setPopup({ type: 'history', sewer: sw })}
-                    style={{ fontSize: 11, padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(196,168,130,0.2)', background: 'transparent', color: 'rgba(196,168,130,0.7)', cursor: 'pointer', fontWeight: 700 }}>
-                    История сдач
-                  </button>
                 </div>
 
                 {/* Материалы */}
-                <div style={{ background: 'rgba(255,255,255,0.05)', margin: '0 10px', borderRadius: 8, overflow: 'hidden', marginBottom: 10 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 4, padding: '6px 10px', fontSize: 9, color: 'rgba(196,168,130,0.6)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid rgba(196,168,130,0.1)' }}>
-                    <span>Материал</span><span style={{ textAlign: 'right' }}>Кол-во</span><span style={{ textAlign: 'right' }}>Выход</span><span style={{ textAlign: 'right' }}>Довезти</span>
+                <div style={{ padding: '8px 12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 55px 45px 60px', gap: 4, padding: '5px 0', fontSize: 9, color: '#7A6A5A', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid rgba(74,111,82,0.1)', marginBottom: 4 }}>
+                    <span>Материал</span>
+                    <span style={{ textAlign: 'right' }}>Кол-во</span>
+                    <span style={{ textAlign: 'right' }}>Выход</span>
+                    <span style={{ textAlign: 'right' }}>Довезти</span>
                   </div>
                   {sewerStocks.length === 0 ? (
-                    <div style={{ padding: '8px 10px', fontSize: 11, color: 'rgba(196,168,130,0.5)', textAlign: 'center' }}>Нет данных</div>
+                    <div style={{ padding: '8px 0', fontSize: 11, color: '#9A8878', textAlign: 'center' }}>Нет данных</div>
                   ) : sewerStocks.map(st => {
                     const matName = st.materials?.name
                     const info = NORM[matName]
@@ -207,10 +197,10 @@ export default function Production() {
                     const output = info ? Math.floor(have / info.norm) : 0
                     const need = info ? Math.max(0, Math.ceil(sw.weekly_capacity * info.norm - have)) : 0
                     return (
-                      <div key={st.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 4, padding: '5px 10px', borderBottom: '0.5px solid rgba(196,168,130,0.06)', fontSize: 11, alignItems: 'center' }}>
-                        <span style={{ color: '#F2EBE0', fontWeight: 600 }}>{matName}</span>
-                        <span style={{ textAlign: 'right', color: 'rgba(242,235,224,0.8)', fontWeight: 700 }}>{fmt(have)} {st.materials?.unit}</span>
-                        <span style={{ textAlign: 'right', color: 'rgba(242,235,224,0.6)' }}>{fmt(output)}</span>
+                      <div key={st.id} style={{ display: 'grid', gridTemplateColumns: '1fr 55px 45px 60px', gap: 4, padding: '4px 0', borderBottom: '0.5px solid rgba(74,111,82,0.06)', fontSize: 11, alignItems: 'center' }}>
+                        <span style={{ color: '#1C2E26', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{matName}</span>
+                        <span style={{ textAlign: 'right', color: '#3A2A1A', fontWeight: 700 }}>{fmt(have)} {st.materials?.unit}</span>
+                        <span style={{ textAlign: 'right', color: '#7A6A5A', fontSize: 10 }}>{fmt(output)}</span>
                         <span style={{ textAlign: 'right' }}>
                           {need > 0
                             ? <span style={{ background: '#EED4DD', color: '#6A1030', borderRadius: 5, fontSize: 10, padding: '1px 5px', fontWeight: 700 }}>+{fmt(need)}</span>
@@ -222,15 +212,15 @@ export default function Production() {
                   })}
                 </div>
 
-                {/* Итог месяца */}
-                <div style={{ padding: '8px 16px 12px', display: 'flex', justifyContent: 'space-between' }}>
+                {/* Итог */}
+                <div style={{ padding: '8px 14px 12px', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(74,111,82,0.1)', marginTop: 4 }}>
                   <div>
-                    <div style={{ fontSize: 10, color: 'rgba(196,168,130,0.6)', fontWeight: 700, textTransform: 'uppercase' }}>Сдала</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#F2EBE0' }}>{fmt(monthQty)} шт</div>
+                    <div style={{ fontSize: 9, color: '#7A6A5A', fontWeight: 700, textTransform: 'uppercase' }}>Сдала</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: '#1C2E26' }}>{fmt(monthQty)} шт</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 10, color: 'rgba(196,168,130,0.6)', fontWeight: 700, textTransform: 'uppercase' }}>Заработала</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#C4A882' }}>{fmt(monthEarned)} ₽</div>
+                    <div style={{ fontSize: 9, color: '#7A6A5A', fontWeight: 700, textTransform: 'uppercase' }}>Заработала</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: '#1A6B28' }}>{fmt(monthEarned)} ₽</div>
                   </div>
                 </div>
               </div>
@@ -239,10 +229,9 @@ export default function Production() {
         </div>
       )}
 
-      {/* СВОДНЫЙ СКЛАД */}
       {activeTab === 'stock' && (
-        <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 600 }}>
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
                 <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>Материал</th>
@@ -257,10 +246,7 @@ export default function Production() {
               {materials.filter(m => SEWER_MATS.includes(m.name)).map(mat => {
                 const whStock = stocks.find(s => s.material_id === mat.id && s.location === 'warehouse')
                 const whQty = whStock?.quantity || 0
-                const sewerQtys = sewers.map(sw => {
-                  const st = stocks.find(s => s.material_id === mat.id && s.location === sw.id)
-                  return st?.quantity || 0
-                })
+                const sewerQtys = sewers.map(sw => stocks.find(s => s.material_id === mat.id && s.location === sw.id)?.quantity || 0)
                 const total = whQty + sewerQtys.reduce((a, b) => a + b, 0)
                 return (
                   <tr key={mat.id}>
@@ -278,43 +264,82 @@ export default function Production() {
         </div>
       )}
 
-      {/* ИСТОРИЯ */}
       {activeTab === 'history' && (
         <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
-                {['Дата', 'Швея', 'Изделие', 'Кол-во', 'Начислено'].map(h => (
-                  <th key={h} style={{ padding: '10px 14px', textAlign: h === 'Кол-во' || h === 'Начислено' ? 'right' : 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>{h}</th>
+                {['Дата','Швея','Изделие','Кол-во','Начислено'].map(h => (
+                  <th key={h} style={{ padding: '10px 14px', textAlign: h==='Кол-во'||h==='Начислено'?'right':'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {productions.slice(0, 100).map(p => {
-                const sw = sewers.find(s => s.id === p.sewer_id)
-                return (
-                  <tr key={p.id}>
-                    <td style={{ padding: '9px 14px', color: '#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
-                      {new Date(p.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
-                    </td>
-                    <td style={{ padding: '9px 14px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{p.sewers?.name}</td>
-                    <td style={{ padding: '9px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: PCOL[p.product] || '#888' }}></span>
-                        {p.product}
-                      </span>
-                    </td>
-                    <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(p.quantity)} шт</td>
-                    <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, color: '#1A6B28', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(p.earned)} ₽</td>
-                  </tr>
-                )
-              })}
+              {productions.slice(0, 100).map(p => (
+                <tr key={p.id}>
+                  <td style={{ padding: '9px 14px', color: '#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                    {new Date(p.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                  </td>
+                  <td style={{ padding: '9px 14px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{p.sewers?.name}</td>
+                  <td style={{ padding: '9px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: PCOL[p.product] || '#888' }}></span>
+                      {p.product}
+                    </span>
+                  </td>
+                  <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(p.quantity)} шт</td>
+                  <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, color: '#1A6B28', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(p.earned)} ₽</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* ПОПАП — ОПЕРАЦИЯ */}
+      {/* ПОПАП ВЕЗТИ */}
+      {popup?.type === 'vezti' && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setPopup(null)}>
+          <div style={{ background: '#fff', borderRadius: 16, width: 500, padding: '24px' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>Везти — {popup.sewer.name}</span>
+              <button onClick={() => setPopup(null)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
+            </div>
+            <div style={{ fontSize: 12, color: '#6A4A10', background: '#EEE4C8', padding: '8px 12px', borderRadius: 8, marginBottom: 16 }}>
+              ⓘ Расчёт на 1 неделю исходя из нормы выработки швеи ({popup.sewer.weekly_capacity} шт/нед). Колонка "Довезти" показывает сколько нужно добавить чтобы швея могла работать всю неделю без остановки.
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: '#F5F0E8' }}>
+                  {['Материал','Есть','Нужно на нед.','Довезти'].map(h => (
+                    <th key={h} style={{ padding: '8px 12px', textAlign: h==='Материал'?'left':'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {getSewerStocks(popup.sewer.id).map(st => {
+                  const matName = st.materials?.name
+                  const info = NORM[matName]
+                  const have = st.quantity
+                  const need = info ? Math.ceil(popup.sewer.weekly_capacity * info.norm) : 0
+                  const bring = Math.max(0, need - have)
+                  return (
+                    <tr key={st.id}>
+                      <td style={{ padding: '8px 12px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{matName}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(have)} {st.materials?.unit}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', color: '#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(need)} {st.materials?.unit}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: bring > 0 ? '#6A1030' : '#1A6B28' }}>
+                        {bring > 0 ? '+' + fmt(bring) + ' ' + st.materials?.unit : '✓ Достаточно'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ПОПАП ОПЕРАЦИЯ */}
       {popup?.type === 'op' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setPopup(null)}>
           <div style={{ background: '#fff', borderRadius: 16, width: 480, padding: '24px' }} onClick={e => e.stopPropagation()}>
@@ -322,7 +347,6 @@ export default function Production() {
               <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>Операция — {popup.sewer.name}</span>
               <button onClick={() => setPopup(null)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
             </div>
-
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
               {[{ id: 'receive', l: 'Выдать материалы' }, { id: 'submit', l: 'Принять изделия' }].map(t => (
                 <button key={t.id} onClick={() => setOpType(t.id)} style={{
@@ -333,7 +357,6 @@ export default function Production() {
                 }}>{t.l}</button>
               ))}
             </div>
-
             {opType === 'receive' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
                 <div>
@@ -350,7 +373,6 @@ export default function Production() {
                 </div>
               </div>
             )}
-
             {opType === 'submit' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
                 <div>
@@ -372,7 +394,6 @@ export default function Production() {
                 )}
               </div>
             )}
-
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <button onClick={submitOp} style={{ padding: '8px 20px', background: '#1C2E26', color: '#C4A882', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                 Сохранить
@@ -383,7 +404,7 @@ export default function Production() {
         </div>
       )}
 
-      {/* ПОПАП — ИСТОРИЯ СДАЧ */}
+      {/* ПОПАП ИСТОРИЯ СДАЧ */}
       {popup?.type === 'history' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setPopup(null)}>
           <div style={{ background: '#fff', borderRadius: 16, width: 560, maxHeight: '80vh', overflow: 'auto', padding: '24px' }} onClick={e => e.stopPropagation()}>
@@ -394,8 +415,8 @@ export default function Production() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
-                  {['Дата', 'Изделие', 'Кол-во', 'Начислено'].map(h => (
-                    <th key={h} style={{ padding: '8px 12px', textAlign: h === 'Кол-во' || h === 'Начислено' ? 'right' : 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>{h}</th>
+                  {['Дата','Изделие','Кол-во','Начислено'].map(h => (
+                    <th key={h} style={{ padding: '8px 12px', textAlign: h==='Кол-во'||h==='Начислено'?'right':'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
