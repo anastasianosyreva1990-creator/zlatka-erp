@@ -8,14 +8,23 @@ WB_TOKEN = os.environ.get('WB_TOKEN') or open('/workspaces/zlatka-erp/.env').rea
 SKUS = {539619113:'Кокошник Красный',546758919:'Кокошник Белый',539628943:'Кокошник Черный',546766746:'Кокошник Цветной'}
 
 WH_MAP = {
-  'Екатеринбург':'ekb','Владимир':'vlad','Воронеж':'voronezh',
-  'Котовск':'kotovsk','Новосемейкино':'novosem','Волгоград':'volgograd','Рязань':'ryazan'
+  'Екатеринбург - Перспективная 14': 'ekb',
+  'Екатеринбург': 'ekb',
+  'Владимир': 'vlad',
+  'Воронеж': 'voronezh',
+  'Котовск': 'kotovsk',
+  'Самара (Новосемейкино)': 'novosem',
+  'Новосемейкино': 'novosem',
+  'Волгоград': 'volgograd',
+  'Рязань (Тюшевское)': 'ryazan',
+  'Рязань': 'ryazan',
+  'Невинномысск': 'nevinnomyssk',
 }
 
 sb = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 from datetime import datetime, timedelta
-date_from = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+date_from = '2025-01-01'
 
 r = requests.get('https://statistics-api.wildberries.ru/api/v1/supplier/stocks',
   headers={'Authorization': WB_TOKEN}, params={'dateFrom': date_from})

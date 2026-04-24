@@ -1,310 +1,587 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+const fmt = x => Math.round(x).toLocaleString('ru-RU')
 const PCOL = {'Кокошник Красный':'#C0392B','Кокошник Белый':'#7F8C8D','Кокошник Черный':'#2C3E50','Кокошник Цветной':'#27AE60'}
 const PLBL = {'Кокошник Красный':'Красный','Кокошник Белый':'Белый','Кокошник Черный':'Чёрный','Кокошник Цветной':'Цветной'}
-const fmt = x => Math.round(x).toLocaleString('ru-RU')
+const PRODUCTS = Object.keys(PCOL)
+
+const MAT_COST = {
+  'Кокошник Красный': 0.0476*288.16 + 0.2*20.09 + 2*0.83 + 30 + 1.19 + 10.90,
+  'Кокошник Белый':   0.0476*286.50 + 0.2*17.03 + 2*0.92 + 30 + 1.19 + 10.90,
+  'Кокошник Черный':  0.0476*289.77 + 0.2*20.09 + 2*0.83 + 30 + 1.19 + 10.90,
+  'Кокошник Цветной': 0.0555*365.83 + 0.2*20.09 + 2*0.83 + 30 + 1.19 + 10.90,
+}
+const BOX_COST = 77.25
+
+const WHS = [
+  {id:'ekb',name:'Екатеринбург',fo:'Уральский',tariff:190},
+  {id:'vlad',name:'Владимир',fo:'Центральный',tariff:130},
+  {id:'voronezh',name:'Воронеж',fo:'Центральный',tariff:130},
+  {id:'kotovsk',name:'Котовск',fo:'Центральный',tariff:120},
+  {id:'novosem',name:'Новосемейкино',fo:'Приволжский',tariff:160},
+  {id:'volgograd',name:'Волгоград',fo:'Южный',tariff:170},
+  {id:'ryazan',name:'Рязань',fo:'Центральный',tariff:130},
+]
+
+const DAILY = {
+  'Кокошник Красный': 515/14,
+  'Кокошник Белый':   63/14,
+  'Кокошник Черный':  164/14,
+  'Кокошник Цветной': 19/14,
+}
 
 export default function Batches() {
-  const [batches,setBatches] = useState([])
-  const [batchItems,setBatchItems] = useState([])
-  const [sewers,setSewers] = useState([])
-  const [stock,setStock] = useState([])
-  const [loading,setLoading] = useState(true)
-  const [activeTab,setActiveTab] = useState('batches')
-  const [filter,setFilter] = useState('all')
-  const [popup,setPopup] = useState(null)
-  const [nbSize,setNbSize] = useState(108)
-  const [nbFb,setNbFb] = useState('')
-  const [apProd,setApProd] = useState('Кокошник Красный')
-  const [apQty,setApQty] = useState('')
-  const [apWho,setApWho] = useState('')
-  const [apFb,setApFb] = useState('')
+  const [batches, setBatches] = useState([])
+  const [batchItems, setBatchItems] = useState([])
+  const [sewers, setSewers] = useState([])
+  const [wbStocks, setWbStocks] = useState([])
+  const [readyStock, setReadyStock] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState('active')
+  const [newPopup, setNewPopup] = useState(false)
+  const [detailPopup, setDetailPopup] = useState(null)
+  const [editStockPopup, setEditStockPopup] = useState(false)
+  const [recPopup, setRecPopup] = useState(false)
+  const [batchSize, setBatchSize] = useState(96)
+  const [customComposition, setCustomComposition] = useState({})
+  const [selectedWh, setSelectedWh] = useState('')
+  const [stockEdits, setStockEdits] = useState({})
+  const [newFb, setNewFb] = useState('')
 
-  useEffect(()=>{loadAll()},[])
+  useEffect(() => { loadAll() }, [])
 
-  async function loadAll(){
+  async function loadAll() {
     setLoading(true)
-    const [{data:b},{data:bi},{data:sw},{data:st}] = await Promise.all([
-      supabase.from('batches').select('*').order('batch_num'),
-      supabase.from('batch_items').select('*, sewers(name)'),
-      supabase.from('sewers').select('*').eq('active',true),
-      supabase.from('material_stock').select('*, materials(name)').eq('location','ready'),
+    const [{ data: b }, { data: bi }, { data: sw }, { data: wb }, { data: rs }] = await Promise.all([
+      supabase.from('batches').select('*').order('created_at', { ascending: false }),
+      supabase.from('batch_items').select('*, sewers(name, tariff)'),
+      supabase.from('sewers').select('*').eq('active', true),
+      supabase.from('wb_stocks').select('*'),
+      supabase.from('ready_stock').select('*'),
     ])
-    setBatches(b||[]);setBatchItems(bi||[]);setSewers(sw||[]);setStock(st||[])
-    if(sw?.length>0) setApWho(sw[0].id)
+    setBatches(b || [])
+    setBatchItems(bi || [])
+    setSewers(sw || [])
+    setWbStocks(wb || [])
+    setReadyStock(rs || [])
     setLoading(false)
   }
 
-  function getItems(batchId){return batchItems.filter(i=>i.batch_id===batchId)}
-  function byColor(){
-    const out={}
-    stock.forEach(s=>{const n=s.materials?.name;if(n)out[n]=(out[n]||0)+s.quantity})
-    return out
+  function getReadyQty(prod) {
+    return readyStock.find(r => r.product === prod)?.quantity || 0
   }
 
-  async function addToStock(){
-    if(!apQty) return
-    const qty=parseInt(apQty)
-    const existing=stock.find(s=>s.materials?.name===apProd&&s.location==='ready')
-    if(existing){
-      await supabase.from('material_stock').update({quantity:existing.quantity+qty}).eq('id',existing.id)
-    } else {
-      const {data:mat}=await supabase.from('materials').select('id').eq('name',apProd).single()
-      if(mat) await supabase.from('material_stock').insert({material_id:mat.id,location:'ready',quantity:qty})
+  function getWbStock(whId, prod) {
+    return wbStocks.find(s => s.warehouse === whId && s.product === prod)?.quantity || 0
+  }
+
+  function daysLeft(whId, prod) {
+    const qty = getWbStock(whId, prod)
+    const spd = DAILY[prod] || 1
+    return Math.floor(qty / spd)
+  }
+
+  function batchByColor(batchId) {
+    const byColor = {}
+    batchItems.filter(i => i.batch_id === batchId).forEach(i => {
+      byColor[i.product] = (byColor[i.product] || 0) + i.quantity
+    })
+    return byColor
+  }
+
+  function calcBatchCost(batchId) {
+    const items = batchItems.filter(i => i.batch_id === batchId)
+    let matCost = 0, laborCost = 0, totalQty = 0
+    items.forEach(i => {
+      matCost += (MAT_COST[i.product] || 60) * i.quantity
+      laborCost += (i.sewers?.tariff || 120) * i.quantity
+      totalQty += i.quantity
+    })
+    const boxCount = Math.ceil(totalQty / 96)
+    const boxCost = BOX_COST * boxCount
+    return {
+      matCost: Math.round(matCost),
+      laborCost: Math.round(laborCost),
+      boxCost: Math.round(boxCost),
+      total: Math.round(matCost + laborCost + boxCost),
+      perUnit: totalQty > 0 ? Math.round((matCost + laborCost + boxCost) / totalQty) : 0,
+      totalQty
     }
-    const sewer=sewers.find(s=>s.id===apWho)
-    if(sewer) await supabase.from('productions').insert({sewer_id:apWho,product:apProd,quantity:qty,date:new Date().toISOString().split('T')[0],earned:qty*sewer.tariff})
-    setApFb(`✓ Добавлено: ${PLBL[apProd]} ${qty} шт`);setApQty('');loadAll()
   }
 
-  async function setStatus(id,val){
-    await supabase.from('batches').update({status:val}).eq('id',id);loadAll()
+  function calcGlobalRecommendation() {
+    const toShip = []
+    const toProduce = []
+    const available = {}
+    PRODUCTS.forEach(p => available[p] = getReadyQty(p))
+
+    WHS.forEach(wh => {
+      const canShip = {}
+      const needProduce = {}
+      PRODUCTS.forEach(prod => {
+        if (DAILY[prod] < 0.3) return
+        const qty = getWbStock(wh.id, prod)
+        const needFor14Days = Math.ceil(DAILY[prod] * 14)
+        const deficit = Math.max(0, needFor14Days - qty)
+        if (deficit <= 0) return
+        const avail = available[prod] || 0
+        if (avail > 0) canShip[prod] = Math.min(deficit, avail)
+        else needProduce[prod] = deficit
+      })
+      if (Object.keys(canShip).length > 0) {
+        const total = Object.values(canShip).reduce((a, b) => a + b, 0)
+        if (total >= 5) toShip.push({ warehouse: wh, composition: canShip, total })
+      }
+      if (Object.keys(needProduce).length > 0) {
+        const total = Object.values(needProduce).reduce((a, b) => a + b, 0)
+        toProduce.push({ warehouse: wh, composition: needProduce, total })
+      }
+    })
+
+    const used = {}
+    PRODUCTS.forEach(p => used[p] = 0)
+    toShip.forEach(s => Object.entries(s.composition).forEach(([p, q]) => used[p] = (used[p] || 0) + q))
+    const remaining = {}
+    PRODUCTS.forEach(p => {
+      const leftover = (available[p] || 0) - (used[p] || 0)
+      if (leftover > 0) remaining[p] = leftover
+    })
+
+    return { toShip, toProduce, remaining }
   }
 
-  const bc=byColor()
-  const totalStock=Object.values(bc).reduce((a,b)=>a+b,0)
-  const filtered=batches.filter(b=>{
-    if(filter==='active') return b.status!=='Отгружено'
-    if(filter==='shipped') return b.status==='Отгружено'
+  async function setStatus(id, val) {
+    if (val === 'Отгружено') {
+      if (!window.confirm('Отметить как отгруженную? Изделия спишутся со склада готовых.')) return
+      const items = batchItems.filter(i => i.batch_id === id)
+      for (const item of items) {
+        const rs = readyStock.find(r => r.product === item.product)
+        if (rs) {
+          await supabase.from('ready_stock').update({
+            quantity: Math.max(0, rs.quantity - item.quantity),
+            updated_at: new Date().toISOString()
+          }).eq('id', rs.id)
+        }
+      }
+    }
+    await supabase.from('batches').update({ status: val }).eq('id', id)
+    loadAll()
+  }
+
+  async function saveStockEdits() {
+    for (const [prod, qty] of Object.entries(stockEdits)) {
+      const rs = readyStock.find(r => r.product === prod)
+      if (rs) {
+        await supabase.from('ready_stock').update({
+          quantity: parseInt(qty) || 0,
+          updated_at: new Date().toISOString()
+        }).eq('id', rs.id)
+      }
+    }
+    setEditStockPopup(false)
+    setStockEdits({})
+    loadAll()
+  }
+
+  async function createBatch() {
+    const total = Object.values(customComposition).reduce((a, b) => a + (parseInt(b) || 0), 0)
+    if (total === 0) { setNewFb('Добавьте изделия'); return }
+    const { data: batch } = await supabase.from('batches').insert({
+      batch_num: batches.length + 1,
+      status: 'Собирается',
+      size: batchSize,
+      filled: total,
+      target_warehouse: selectedWh || null,
+    }).select().single()
+    if (batch) {
+      for (const [prod, qty] of Object.entries(customComposition)) {
+        if (!qty || parseInt(qty) <= 0) continue
+        await supabase.from('batch_items').insert({
+          batch_id: batch.id,
+          sewer_id: null,
+          product: prod,
+          quantity: parseInt(qty),
+        })
+      }
+    }
+    setNewFb(`✓ Партия создана`)
+    setTimeout(() => { setNewPopup(false); setNewFb(''); setCustomComposition({}); setSelectedWh(''); loadAll() }, 1500)
+  }
+
+  async function deleteBatch(id) {
+    if (!window.confirm('Удалить партию?')) return
+    await supabase.from('batch_items').delete().eq('batch_id', id)
+    await supabase.from('batches').delete().eq('id', id)
+    loadAll()
+  }
+
+  if (loading) return <div style={{ padding: 40, color: '#5A4A3A' }}>Загрузка...</div>
+
+  const filtered = batches.filter(b => {
+    if (filter === 'active') return b.status !== 'Отгружено'
+    if (filter === 'shipped') return b.status === 'Отгружено'
     return true
   })
 
-  if(loading) return <div style={{padding:40,color:'#5A4A3A'}}>Загрузка...</div>
+  const TabBtn = ({ id, label }) => (
+    <button onClick={() => setFilter(id)} style={{
+      padding: '6px 16px', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+      border: `1px solid ${filter === id ? '#1C2E26' : 'rgba(74,111,82,0.2)'}`,
+      background: filter === id ? '#1C2E26' : 'transparent',
+      color: filter === id ? '#C4A882' : '#4A3A2A'
+    }}>{label}</button>
+  )
 
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title">Партии <span>/ К отгрузке</span></h1>
-      </div>
+      <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1C2E26', marginBottom: 20 }}>
+        Партии / <span style={{ color: '#C4A882' }}>Склад готовых</span>
+      </h1>
 
-      <div className="metrics">
-        <div className="metric-card dark">
-          <div className="metric-label">Всего партий</div>
-          <div className="metric-value">{batches.length}</div>
-          <div className="metric-sub">с начала работы</div>
-        </div>
-        <div className="metric-card wine">
-          <div className="metric-label">К отгрузке</div>
-          <div className="metric-value" style={{color:'#6A1030'}}>{batches.filter(b=>b.filled>=b.size&&b.status!=='Отгружено').length}</div>
-          <div className="metric-sub">готовы к отправке</div>
-        </div>
-        <div className="metric-card green">
-          <div className="metric-label">Отгружено</div>
-          <div className="metric-value" style={{color:'#1A6B28'}}>{batches.filter(b=>b.status==='Отгружено').length}</div>
-          <div className="metric-sub">партий всего</div>
-        </div>
-        <div className="metric-card gold">
-          <div className="metric-label">Склад готовых</div>
-          <div className="metric-value">{fmt(totalStock)}</div>
-          <div className="metric-sub">штук</div>
-        </div>
-      </div>
-
-      <div className="tabs">
-        {[{id:'batches',l:'Партии'},{id:'stock',l:'Склад готовых'},{id:'new',l:'Новая партия'},{id:'add',l:'Принять изделия'}].map(t=>(
-          <button key={t.id} className={`tab-btn${activeTab===t.id?' active':''}`} onClick={()=>setActiveTab(t.id)}>{t.l}</button>
-        ))}
-      </div>
-
-      {activeTab==='batches'&&(
-        <div>
-          <div style={{display:'flex',gap:6,marginBottom:12}}>
-            {[['all','Все'],['active','Активные'],['shipped','Отгружённые']].map(([k,l])=>(
-              <button key={k} onClick={()=>setFilter(k)} style={{fontSize:11,padding:'4px 12px',borderRadius:16,border:`1px solid ${filter===k?'#1C2E26':'rgba(74,111,82,0.2)'}`,background:filter===k?'#1C2E26':'transparent',color:filter===k?'#C4A882':'#4A3A2A',cursor:'pointer',fontWeight:700}}>{l}</button>
-            ))}
+      {/* Склад готовых */}
+      <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', padding: '16px 18px', marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: '#7A6A5A', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Склад готовых изделий
           </div>
-          <div className="table-wrap">
-            <table>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => { const ed = {}; readyStock.forEach(r => ed[r.product] = r.quantity); setStockEdits(ed); setEditStockPopup(true) }}
+              style={{ fontSize: 11, padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(74,111,82,0.2)', background: 'transparent', color: '#4A3A2A', cursor: 'pointer', fontWeight: 700 }}>
+              ✎ Редактировать
+            </button>
+            <button onClick={() => setRecPopup(true)}
+              style={{ fontSize: 11, padding: '4px 10px', borderRadius: 8, border: '1px solid #C4A882', background: 'rgba(196,168,130,0.15)', color: '#6A4A10', cursor: 'pointer', fontWeight: 700 }}>
+              💡 Рекомендация
+            </button>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10 }}>
+          {PRODUCTS.map(prod => {
+            const qty = getReadyQty(prod)
+            return (
+              <div key={prod} style={{ background: '#F5F0E8', borderRadius: 8, padding: '10px 12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: PCOL[prod] }}></span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#1C2E26' }}>{PLBL[prod]}</span>
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: qty > 0 ? '#1C2E26' : '#9A8878' }}>{fmt(qty)} шт</div>
+              </div>
+            )
+          })}
+          <div style={{ background: '#1C2E26', borderRadius: 8, padding: '10px 12px' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(196,168,130,0.7)', marginBottom: 4 }}>Итого</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#C4A882' }}>{fmt(PRODUCTS.reduce((a, p) => a + getReadyQty(p), 0))} шт</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Управление */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <TabBtn id="active" label="Активные"/>
+          <TabBtn id="shipped" label="Отгруженные"/>
+          <TabBtn id="all" label="Все"/>
+        </div>
+        <button onClick={() => { setNewPopup(true); setNewFb(''); setCustomComposition({}); setSelectedWh('') }}
+          style={{ padding: '7px 16px', background: '#1C2E26', color: '#C4A882', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          + Новая партия
+        </button>
+      </div>
+
+      {/* Таблица партий */}
+      <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 800 }}>
+          <thead>
+            <tr style={{ background: '#F5F0E8' }}>
+              {['#','Дата','Размер','Состав','Склад WB','Себес/шт','Статус',''].map(h => (
+                <th key={h} style={{ padding: '10px 12px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(batch => {
+              const byColor = batchByColor(batch.id)
+              const cost = calcBatchCost(batch.id)
+              const wh = WHS.find(w => w.id === batch.target_warehouse)
+              return (
+                <tr key={batch.id}>
+                  <td style={{ padding: '9px 12px', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>#{batch.batch_num}</td>
+                  <td style={{ padding: '9px 12px', color: '#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                    {new Date(batch.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                  </td>
+                  <td style={{ padding: '9px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{batch.size} шт</td>
+                  <td style={{ padding: '9px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {Object.entries(byColor).filter(([,q]) => q > 0).map(([prod, q]) => (
+                        <span key={prod} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, padding: '1px 6px', background: '#F5F0E8', borderRadius: 5 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: PCOL[prod] }}></span>
+                          {PLBL[prod]} {q}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td style={{ padding: '9px 12px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{wh?.name || '—'}</td>
+                  <td style={{ padding: '9px 12px', fontWeight: 800, color: '#1A6B28', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(cost.perUnit)} ₽</td>
+                  <td style={{ padding: '9px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                    <select value={batch.status} onChange={e => setStatus(batch.id, e.target.value)}
+                      style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, border: '1px solid rgba(74,111,82,0.25)', background: '#fff', cursor: 'pointer', fontWeight: 700 }}>
+                      <option value="Собирается">Собирается</option>
+                      <option value="Готово к отгрузке">Готово к отгрузке</option>
+                      <option value="Отгружено">Отгружено</option>
+                    </select>
+                  </td>
+                  <td style={{ padding: '9px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                    <button onClick={() => setDetailPopup(batch)} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: '1px solid rgba(196,168,130,0.4)', background: 'rgba(196,168,130,0.1)', color: '#4A3A2A', cursor: 'pointer', fontWeight: 700, marginRight: 4 }}>
+                      Детали
+                    </button>
+                    <button onClick={() => deleteBatch(batch.id)} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: '1px solid #EED4DD', background: '#EED4DD', color: '#6A1030', cursor: 'pointer', fontWeight: 700 }}>
+                      ×
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
+            {filtered.length === 0 && (
+              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: '#7A6A5A' }}>Нет партий</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ПОПАП — РЕДАКТИРОВАТЬ СКЛАД */}
+      {editStockPopup && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setEditStockPopup(false)}>
+          <div style={{ background: '#fff', borderRadius: 16, width: 400, padding: '24px' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>Редактировать склад готовых</span>
+              <button onClick={() => setEditStockPopup(false)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
+            </div>
+            <div style={{ fontSize: 12, color: '#6A4A10', background: '#EEE4C8', padding: '8px 12px', borderRadius: 8, marginBottom: 14 }}>
+              Введите актуальные остатки готовых изделий на вашем складе
+            </div>
+            {PRODUCTS.map(prod => (
+              <div key={prod} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: PCOL[prod] }}></span>
+                <span style={{ flex: 1, fontWeight: 700, fontSize: 13 }}>{PLBL[prod]}</span>
+                <input type="number" value={stockEdits[prod] ?? ''} onChange={e => setStockEdits({ ...stockEdits, [prod]: e.target.value })}
+                  style={{ width: 80, padding: '5px 8px', border: '1px solid rgba(74,111,82,0.25)', borderRadius: 6, fontSize: 13, textAlign: 'right' }} />
+                <span style={{ fontSize: 11, color: '#7A6A5A' }}>шт</span>
+              </div>
+            ))}
+            <button onClick={saveStockEdits} style={{ width: '100%', marginTop: 12, padding: '10px', background: '#1C2E26', color: '#C4A882', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              Сохранить
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ПОПАП — РЕКОМЕНДАЦИЯ */}
+      {recPopup && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setRecPopup(false)}>
+          <div style={{ background: '#fff', borderRadius: 16, width: 580, maxHeight: '85vh', overflow: 'auto', padding: '24px' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>💡 Рекомендация</span>
+              <button onClick={() => setRecPopup(false)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
+            </div>
+            <div style={{ fontSize: 12, color: '#6A4A10', background: '#EEE4C8', padding: '10px 12px', borderRadius: 8, marginBottom: 16 }}>
+              ⓘ Потребность на 14 дней по каждому складу WB с учётом текущих остатков и темпа продаж.
+            </div>
+            {(() => {
+              const rec = calcGlobalRecommendation()
+              return (
+                <>
+                  {rec.toShip.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: '#1A4A28', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        📦 Отгрузить сейчас (есть на складе)
+                      </div>
+                      {rec.toShip.map((item, i) => (
+                        <div key={i} style={{ background: '#D8EED8', borderRadius: 10, padding: '12px 14px', marginBottom: 8 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <div>
+                              <div style={{ fontSize: 14, fontWeight: 800, color: '#1C2E26' }}>{item.warehouse.name}</div>
+                              <div style={{ fontSize: 11, color: '#5A4A3A' }}>{item.warehouse.fo} ФО</div>
+                            </div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: '#1A6B28' }}>{item.total} шт</div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            {Object.entries(item.composition).map(([prod, q]) => (
+                              <span key={prod} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, padding: '3px 8px', background: '#fff', borderRadius: 6 }}>
+                                <span style={{ width: 7, height: 7, borderRadius: '50%', background: PCOL[prod] }}></span>
+                                {PLBL[prod]} {q} шт
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {rec.toProduce.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: '#185FA5', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        🧵 Произвести (нет на складе, но нужно)
+                      </div>
+                      {rec.toProduce.map((item, i) => (
+                        <div key={i} style={{ background: '#E6F1FB', borderRadius: 10, padding: '12px 14px', marginBottom: 8 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <div>
+                              <div style={{ fontSize: 14, fontWeight: 800, color: '#1C2E26' }}>{item.warehouse.name}</div>
+                              <div style={{ fontSize: 11, color: '#5A4A3A' }}>{item.warehouse.fo} ФО</div>
+                            </div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: '#185FA5' }}>{item.total} шт</div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            {Object.entries(item.composition).map(([prod, q]) => (
+                              <span key={prod} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, padding: '3px 8px', background: '#fff', borderRadius: 6 }}>
+                                <span style={{ width: 7, height: 7, borderRadius: '50%', background: PCOL[prod] }}></span>
+                                {PLBL[prod]} {q} шт
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {Object.keys(rec.remaining).length > 0 && (
+                    <div style={{ background: '#F5F0E8', borderRadius: 8, padding: '10px 12px', marginBottom: 10 }}>
+                      <div style={{ fontSize: 12, color: '#7A6A5A', fontWeight: 700, marginBottom: 6 }}>💤 Пока не отгружать — нет потребности:</div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {Object.entries(rec.remaining).map(([prod, q]) => (
+                          <span key={prod} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, padding: '3px 8px', background: '#fff', borderRadius: 6 }}>
+                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: PCOL[prod] }}></span>
+                            {PLBL[prod]} {q} шт
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {rec.toShip.length === 0 && rec.toProduce.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: 24, color: '#7A6A5A', fontSize: 13 }}>
+                      Все склады WB обеспечены на 14 дней вперёд 🎉
+                    </div>
+                  )}
+                </>
+              )
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* ПОПАП — НОВАЯ ПАРТИЯ */}
+      {newPopup && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setNewPopup(false)}>
+          <div style={{ background: '#fff', borderRadius: 16, width: 500, padding: '24px', maxHeight: '85vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>Новая партия</span>
+              <button onClick={() => setNewPopup(false)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: '#7A6A5A', fontWeight: 700, marginBottom: 6 }}>Размер партии</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[96, 108].map(s => (
+                  <button key={s} onClick={() => setBatchSize(s)} style={{
+                    flex: 1, padding: '8px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                    border: `1px solid ${batchSize === s ? '#1C2E26' : 'rgba(74,111,82,0.2)'}`,
+                    background: batchSize === s ? '#1C2E26' : 'transparent',
+                    color: batchSize === s ? '#C4A882' : '#4A3A2A'
+                  }}>{s} шт</button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: '#7A6A5A', fontWeight: 700, marginBottom: 6 }}>Состав партии</div>
+              {PRODUCTS.map(prod => {
+                const avail = getReadyQty(prod)
+                return (
+                  <div key={prod} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: PCOL[prod] }}></span>
+                    <span style={{ flex: 1, fontWeight: 700, fontSize: 13 }}>{PLBL[prod]}</span>
+                    <span style={{ fontSize: 11, color: '#7A6A5A' }}>есть {avail} шт</span>
+                    <input type="number" value={customComposition[prod] || ''} onChange={e => setCustomComposition({ ...customComposition, [prod]: parseInt(e.target.value) || 0 })}
+                      placeholder="0" min="0" max={avail}
+                      style={{ width: 70, padding: '5px 8px', border: '1px solid rgba(74,111,82,0.25)', borderRadius: 6, fontSize: 13, textAlign: 'right' }} />
+                  </div>
+                )
+              })}
+              <div style={{ marginTop: 8, padding: '6px 10px', background: '#F5F0E8', borderRadius: 6, fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
+                <span>Итого в партии</span>
+                <strong>{Object.values(customComposition).reduce((a, b) => a + (b || 0), 0)} / {batchSize} шт</strong>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: '#7A6A5A', fontWeight: 700, marginBottom: 6 }}>Склад WB</div>
+              <select value={selectedWh} onChange={e => setSelectedWh(e.target.value)}
+                style={{ width: '100%', padding: '7px 10px', border: '1px solid rgba(74,111,82,0.25)', borderRadius: 8, fontSize: 13 }}>
+                <option value="">— Не выбран —</option>
+                {WHS.map(w => <option key={w.id} value={w.id}>{w.name} ({w.fo})</option>)}
+              </select>
+            </div>
+
+            <button onClick={createBatch}
+              style={{ width: '100%', padding: '10px', background: '#1C2E26', color: '#C4A882', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+              Создать партию
+            </button>
+            {newFb && <div style={{ marginTop: 10, fontSize: 12, color: newFb.startsWith('✓') ? '#1A6B28' : '#6A1030', fontWeight: 700 }}>{newFb}</div>}
+          </div>
+        </div>
+      )}
+
+      {/* ПОПАП — ДЕТАЛИ */}
+      {detailPopup && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setDetailPopup(null)}>
+          <div style={{ background: '#fff', borderRadius: 16, width: 500, maxHeight: '80vh', overflow: 'auto', padding: '24px' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>Партия #{detailPopup.batch_num} — детали</span>
+              <button onClick={() => setDetailPopup(null)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 14 }}>
               <thead>
-                <tr>
-                  <th>№ · Состав</th>
-                  <th style={{textAlign:'right'}}>Размер</th>
-                  <th style={{textAlign:'right'}}>Собрано</th>
-                  <th style={{textAlign:'right'}}>Мат-лы</th>
-                  <th style={{textAlign:'right'}}>Работа</th>
-                  <th style={{textAlign:'right'}}>₽/шт</th>
-                  <th style={{textAlign:'center'}}>Сигнал</th>
-                  <th>Статус</th>
-                  <th></th>
+                <tr style={{ background: '#F5F0E8' }}>
+                  {['Изделие','Кол-во'].map(h => (
+                    <th key={h} style={{ padding: '8px 12px', textAlign: h === 'Кол-во' ? 'right' : 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {[...filtered].reverse().map(b=>{
-                  const items=getItems(b.id)
-                  const isShipped=b.status==='Отгружено'
-                  const unit=b.filled>0?Math.round((b.mat_cost+b.labor_cost)/b.filled):0
-                  const readyToShip=b.filled>=b.size&&!isShipped
-                  return (
-                    <tr key={b.id} style={{background:isShipped?'#F5F5F0':'#fff',opacity:isShipped?0.75:1}}>
-                      <td>
-                        <div style={{fontWeight:800,fontSize:12,color:'#1C2E26',marginBottom:3}}>Партия №{b.batch_num}</div>
-                        <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
-                          {items.map((it,i)=>(
-                            <span key={i} style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:11,color:'#3A2A1A',fontWeight:600}}>
-                              <span style={{width:7,height:7,borderRadius:'50%',background:PCOL[it.product]||'#888'}}></span>
-                              {PLBL[it.product]} {fmt(it.quantity)}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td style={{textAlign:'right',fontWeight:700}}>{fmt(b.size)}</td>
-                      <td style={{textAlign:'right',fontWeight:800,color:b.filled>=b.size?'#1A6B28':'#6A4A10'}}>{fmt(b.filled)}</td>
-                      <td style={{textAlign:'right',fontWeight:600}}>{fmt(b.mat_cost)} ₽</td>
-                      <td style={{textAlign:'right',fontWeight:600}}>{fmt(b.labor_cost)} ₽</td>
-                      <td style={{textAlign:'right',fontWeight:800}}>{fmt(unit)} ₽</td>
-                      <td style={{textAlign:'center'}}>
-                        <span style={{fontSize:11,padding:'3px 10px',borderRadius:20,fontWeight:700,
-                          background:readyToShip?'#D8EED8':isShipped?'#E8E4DC':'#EEE4C8',
-                          color:readyToShip?'#1A4A28':isShipped?'#3A3028':'#6A4A10'}}>
-                          {readyToShip?'Отгрузите':isShipped?'Отгружено':'Собирается'}
-                        </span>
-                      </td>
-                      <td>
-                        <select value={b.status} onChange={e=>setStatus(b.id,e.target.value)}
-                          style={{fontSize:11,padding:'4px 8px',borderRadius:6,border:'1px solid rgba(74,111,82,0.25)',background:'#fff',cursor:'pointer',fontWeight:600,color:'#1C2E26',minWidth:130}}>
-                          <option value="">—</option>
-                          <option value="Собирается">Собирается</option>
-                          <option value="Готово к отгрузке">Готово к отгрузке</option>
-                          <option value="Отгружено">Отгружено</option>
-                        </select>
-                      </td>
-                      <td>
-                        <button onClick={()=>setPopup({batch:b,items:getItems(b.id)})}
-                          style={{fontSize:11,padding:'4px 10px',borderRadius:6,border:'1px solid rgba(74,111,82,0.2)',background:'transparent',cursor:'pointer',fontWeight:700,color:'#1C2E26'}}>
-                          Детали
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-                {filtered.length===0&&<tr><td colSpan={9} style={{textAlign:'center',padding:32,color:'#7A6A5A'}}>Нет партий</td></tr>}
+                {batchItems.filter(i => i.batch_id === detailPopup.id).map(item => (
+                  <tr key={item.id}>
+                    <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: PCOL[item.product] || '#888' }}></span>
+                        {PLBL[item.product] || item.product}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(item.quantity)} шт</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {activeTab==='stock'&&(
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:12}}>
-          {['Кокошник Красный','Кокошник Белый','Кокошник Черный','Кокошник Цветной'].map(prod=>(
-            <div key={prod} style={{background:'#fff',border:'0.5px solid rgba(74,111,82,0.15)',borderRadius:12,padding:'14px 16px'}}>
-              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
-                <span style={{width:12,height:12,borderRadius:'50%',background:PCOL[prod]}}></span>
-                <span style={{fontWeight:700,fontSize:14,color:'#1C2E26'}}>{PLBL[prod]}</span>
-              </div>
-              <div style={{fontSize:32,fontWeight:800,color:bc[prod]>0?'#1C2E26':'#C8BFB0'}}>{fmt(bc[prod]||0)}</div>
-              <div style={{fontSize:11,color:'#7A6A5A',fontWeight:600,marginTop:3}}>кокошников</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {activeTab==='new'&&(
-        <div style={{maxWidth:480}}>
-          <div className="card">
-            <div className="card-title">Сформировать партию по FIFO</div>
-            <div className="info-box mb-12">Система возьмёт изделия со склада готовых в порядке поступления.</div>
-            <div className="form-group" style={{marginBottom:12}}>
-              <label className="form-label">Размер партии (штук)</label>
-              <input type="number" value={nbSize} onChange={e=>setNbSize(parseInt(e.target.value))}/>
-            </div>
-            <button onClick={async()=>{
-              const bc2=byColor()
-              const total=Object.values(bc2).reduce((a,b)=>a+b,0)
-              if(total===0){setNbFb('Склад готовых пуст');return}
-              const toTake=Math.min(nbSize,total)
-              const details=[]
-              let filled=0
-              for(const prod of ['Кокошник Красный','Кокошник Белый','Кокошник Черный','Кокошник Цветной']){
-                if(filled>=toTake) break
-                const have=bc2[prod]||0
-                if(have===0) continue
-                const take=Math.min(toTake-filled,have)
-                details.push({product:prod,quantity:take})
-                filled+=take
-              }
-              const {data:nb}=await supabase.from('batches').insert({batch_num:batches.length+1,size:nbSize,filled,status:'',mat_cost:filled*58,labor_cost:filled*110}).select().single()
-              if(nb){
-                for(const d of details){
-                  await supabase.from('batch_items').insert({batch_id:nb.id,product:d.product,quantity:d.quantity})
-                  const si=stock.find(s=>s.materials?.name===d.product&&s.location==='ready')
-                  if(si) await supabase.from('material_stock').update({quantity:Math.max(0,si.quantity-d.quantity)}).eq('id',si.id)
-                }
-              }
-              setNbFb(`✓ Партия №${batches.length+1} создана: ${filled} шт`);loadAll()
-            }} className="btn btn-primary">Сформировать по FIFO</button>
-            {nbFb&&<div className="mt-8 text-green text-sm" style={{fontWeight:700}}>{nbFb}</div>}
-          </div>
-        </div>
-      )}
-
-      {activeTab==='add'&&(
-        <div style={{maxWidth:480}}>
-          <div className="card">
-            <div className="card-title">Принять изделия на склад готовых</div>
-            <div className="form-grid fg3" style={{marginBottom:12}}>
-              <div className="form-group">
-                <label className="form-label">Изделие</label>
-                <select value={apProd} onChange={e=>setApProd(e.target.value)}>
-                  {['Кокошник Красный','Кокошник Белый','Кокошник Черный','Кокошник Цветной'].map(p=><option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Количество</label>
-                <input type="number" value={apQty} onChange={e=>setApQty(e.target.value)} placeholder="0"/>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Швея</label>
-                <select value={apWho} onChange={e=>setApWho(e.target.value)}>
-                  {sewers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-            </div>
-            <button onClick={addToStock} className="btn btn-primary">Добавить на склад</button>
-            {apFb&&<div className="mt-8 text-green text-sm" style={{fontWeight:700}}>{apFb}</div>}
-          </div>
-        </div>
-      )}
-
-      {popup&&(
-        <div className="popup-overlay" onClick={()=>setPopup(null)}>
-          <div className="popup" onClick={e=>e.stopPropagation()}>
-            <div className="popup-header">
-              <span className="popup-title">Партия №{popup.batch.batch_num}</span>
-              <button className="popup-close" onClick={()=>setPopup(null)}>×</button>
-            </div>
-            <div className="popup-body">
-              <div style={{fontSize:12,color:'#7A6A5A',fontWeight:600,marginBottom:12}}>{popup.batch.filled} шт из {popup.batch.size}</div>
-              {popup.items.map((it,i)=>(
-                <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 0',borderBottom:'0.5px solid rgba(74,111,82,0.08)',fontSize:13}}>
-                  <span style={{display:'flex',alignItems:'center',gap:6,fontWeight:700}}>
-                    <span style={{width:9,height:9,borderRadius:'50%',background:PCOL[it.product]}}></span>
-                    {PLBL[it.product]}
-                  </span>
-                  <span style={{fontWeight:700}}>{fmt(it.quantity)} шт</span>
-                  <span style={{color:'#1A6B28',fontWeight:800}}>{fmt(it.quantity*110)} ₽</span>
+            {(() => {
+              const cost = calcBatchCost(detailPopup.id)
+              return (
+                <div style={{ background: '#F5F0E8', borderRadius: 8, padding: '12px 14px' }}>
+                  {[
+                    { l: 'Материалы', v: fmt(cost.matCost) + ' ₽' },
+                    { l: 'Зарплата', v: fmt(cost.laborCost) + ' ₽' },
+                    { l: `Коробá (${Math.ceil(cost.totalQty / 96)} × ${fmt(BOX_COST)} ₽)`, v: fmt(cost.boxCost) + ' ₽' },
+                    { l: 'Итого', v: fmt(cost.total) + ' ₽', bold: true },
+                    { l: 'Себестоимость/шт', v: fmt(cost.perUnit) + ' ₽', bold: true, green: true },
+                  ].map((r, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: i < 4 ? '0.5px solid rgba(196,168,130,0.2)' : 'none', fontSize: r.bold ? 13 : 12 }}>
+                      <span style={{ color: '#5A4A3A', fontWeight: r.bold ? 800 : 600 }}>{r.l}</span>
+                      <span style={{ fontWeight: 800, color: r.green ? '#1A6B28' : '#1C2E26' }}>{r.v}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              <div style={{marginTop:12,paddingTop:8,borderTop:'1px solid rgba(196,168,130,0.2)'}}>
-                {[
-                  {l:'Материалы',v:fmt(popup.batch.mat_cost)+' ₽'},
-                  {l:'Работа',v:fmt(popup.batch.labor_cost)+' ₽'},
-                ].map((r,i)=>(
-                  <div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'3px 0',color:'#3A2A1A',fontWeight:600}}>
-                    <span style={{color:'#7A6A5A'}}>{r.l}</span><span>{r.v}</span>
-                  </div>
-                ))}
-                <div style={{display:'flex',justifyContent:'space-between',fontSize:14,fontWeight:800,borderTop:'1px solid rgba(196,168,130,0.2)',paddingTop:8,marginTop:4,color:'#1C2E26'}}>
-                  <span>Итого себестоимость</span>
-                  <span>{fmt(popup.batch.mat_cost+popup.batch.labor_cost)} ₽</span>
-                </div>
-                <div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'#7A6A5A',fontWeight:600,marginTop:4}}>
-                  <span>Стоимость единицы</span>
-                  <span>{fmt(popup.batch.filled>0?(popup.batch.mat_cost+popup.batch.labor_cost)/popup.batch.filled:0)} ₽/шт</span>
-                </div>
-              </div>
-            </div>
+              )
+            })()}
           </div>
         </div>
       )}
