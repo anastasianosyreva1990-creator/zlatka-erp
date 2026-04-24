@@ -27,7 +27,6 @@ export default function Documents(){
   const [invNum,setInvNum]=useState('')
   const [invSum,setInvSum]=useState('')
   const [invDate,setInvDate]=useState(new Date().toISOString().split('T')[0])
-  const [invType,setInvType]=useState('invoice')
   const [invFb,setInvFb]=useState('')
 
   useEffect(()=>{loadAll()},[])
@@ -44,15 +43,12 @@ export default function Documents(){
     setLoading(false)
   }
 
-  function getMonthProds(sewerId,month){
-    const prefix=MONTH_PREFIX[month]
-    if(!prefix) return []
-    return productions.filter(p=>p.sewer_id===sewerId&&p.date?.startsWith(prefix))
-  }
-
   function getActData(sewerId,month){
+    const prefix=MONTH_PREFIX[month]
+    if(!prefix) return {}
     const byColor={}
-    getMonthProds(sewerId,month).forEach(p=>{byColor[p.product]=(byColor[p.product]||0)+p.quantity})
+    productions.filter(p=>p.sewer_id===sewerId&&p.date?.startsWith(prefix))
+      .forEach(p=>{byColor[p.product]=(byColor[p.product]||0)+p.quantity})
     return byColor
   }
 
@@ -66,32 +62,51 @@ export default function Documents(){
 
   async function addInvoice(){
     if(!invSum){setInvFb('Введите сумму');return}
-    const existing=invoices.find(i=>i.sewer_id===invWho&&i.month===invMonth&&i.type===invType)
-    if(existing){
-      await supabase.from('invoices').update({invoice_num:invNum||existing.invoice_num,amount:parseFloat(invSum),invoice_date:invDate,has_receipt:invType==='receipt'?true:existing.has_receipt}).eq('id',existing.id)
-      setInvFb('✓ Обновлено')
-    } else {
-      await supabase.from('invoices').insert({sewer_id:invWho,month:invMonth,invoice_num:invNum,amount:parseFloat(invSum),invoice_date:invDate,has_receipt:invType==='receipt',status:'unpaid',type:invType})
-      setInvFb('✓ Добавлено в реестр')
-    }
-    setInvNum('');setInvSum('');loadAll()
+    await supabase.from('invoices').insert({
+      sewer_id:invWho,month:invMonth,invoice_num:invNum,
+      amount:parseFloat(invSum),invoice_date:invDate,
+      has_receipt:false,status:'unpaid',type:'invoice'
+    })
+    setInvFb('✓ Добавлено в реестр')
+    setInvNum('');setInvSum('');
+    loadAll()
   }
 
   async function setInvStatus(id,val){
-    await supabase.from('invoices').update({status:val,paid_date:val==='paid'?new Date().toISOString().split('T')[0]:null}).eq('id',id);loadAll()
+    await supabase.from('invoices').update({
+      status:val,
+      paid_date:val==='paid'?new Date().toISOString().split('T')[0]:null
+    }).eq('id',id)
+    loadAll()
+  }
+
+  async function setReceiptStatus(id,val){
+    await supabase.from('invoices').update({has_receipt:val==='yes'}).eq('id',id)
+    loadAll()
+  }
+
+  async function deleteInvoice(id){
+    if(!window.confirm('Удалить счёт из реестра?')) return
+    await supabase.from('invoices').delete().eq('id',id)
+    loadAll()
   }
 
   if(loading) return <div style={{padding:40,color:'#5A4A3A'}}>Загрузка...</div>
 
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title">Документы <span>/ Акты и счета</span></h1>
-      </div>
+      <h1 style={{fontSize:22,fontWeight:800,color:'#1C2E26',marginBottom:20}}>
+        Документы / <span style={{color:'#C4A882'}}>Акты и счета</span>
+      </h1>
 
-      <div className="tabs">
-        {[{id:'acts',l:'Акты'},{id:'invoices',l:'Реестр счетов'},{id:'add',l:'Добавить счёт / чек'}].map(t=>(
-          <button key={t.id} className={`tab-btn${activeTab===t.id?' active':''}`} onClick={()=>setActiveTab(t.id)}>{t.l}</button>
+      <div style={{display:'flex',gap:6,marginBottom:20,flexWrap:'wrap'}}>
+        {[{id:'acts',l:'Акты'},{id:'invoices',l:'Реестр счетов'},{id:'add',l:'Добавить счёт'}].map(t=>(
+          <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{
+            padding:'6px 16px',borderRadius:20,fontSize:12,fontWeight:700,cursor:'pointer',
+            border:`1px solid ${activeTab===t.id?'#1C2E26':'rgba(74,111,82,0.2)'}`,
+            background:activeTab===t.id?'#1C2E26':'transparent',
+            color:activeTab===t.id?'#C4A882':'#4A3A2A'
+          }}>{t.l}</button>
         ))}
       </div>
 
@@ -99,7 +114,12 @@ export default function Documents(){
         <div>
           <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
             {MONTHS.map(m=>(
-              <button key={m} onClick={()=>setSelMonth(m)} style={{padding:'5px 14px',borderRadius:16,fontSize:12,border:`1px solid ${selMonth===m?'#1C2E26':'rgba(74,111,82,0.2)'}`,background:selMonth===m?'#1C2E26':'transparent',color:selMonth===m?'#C4A882':'#4A3A2A',cursor:'pointer',fontWeight:700}}>{m}</button>
+              <button key={m} onClick={()=>setSelMonth(m)} style={{
+                padding:'5px 14px',borderRadius:16,fontSize:12,fontWeight:700,cursor:'pointer',
+                border:`1px solid ${selMonth===m?'#1C2E26':'rgba(74,111,82,0.2)'}`,
+                background:selMonth===m?'#1C2E26':'transparent',
+                color:selMonth===m?'#C4A882':'#4A3A2A'
+              }}>{m}</button>
             ))}
           </div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:12}}>
@@ -149,7 +169,7 @@ export default function Documents(){
                           Отметить оплаченным
                         </button>
                       )}
-                      {!inv&&(
+                      {!inv&&qty>0&&(
                         <button onClick={()=>{setActiveTab('add');setInvWho(sw.id);setInvMonth(selMonth);setInvSum(sum.toString())}}
                           style={{fontSize:11,padding:'4px 10px',borderRadius:8,border:'1px solid rgba(74,111,82,0.2)',background:'transparent',color:'#3A2A1A',cursor:'pointer',fontWeight:700}}>
                           + Счёт
@@ -165,38 +185,51 @@ export default function Documents(){
       )}
 
       {activeTab==='invoices'&&(
-        <div className="table-wrap">
-          <table>
+        <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',overflow:'auto'}}>
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,minWidth:800}}>
             <thead>
-              <tr>
-                <th>Месяц</th><th>Швея</th><th style={{textAlign:'right'}}>Сумма</th>
-                <th>№ счёта</th><th>Дата</th><th>Чек</th><th>Статус</th><th>Оплачен</th>
+              <tr style={{background:'#F5F0E8'}}>
+                {['Месяц','Швея','Сумма','№ счёта','Дата','Чек','Статус','Оплачен',''].map(h=>(
+                  <th key={h} style={{padding:'10px 14px',textAlign:h==='Сумма'?'right':'left',color:'#4A3A2A',fontWeight:700,fontSize:11,borderBottom:'1px solid rgba(196,168,130,0.2)'}}>{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {invoices.map(inv=>(
                 <tr key={inv.id}>
-                  <td style={{fontWeight:600}}>{inv.month}</td>
-                  <td style={{fontWeight:700}}>{inv.sewers?.name}</td>
-                  <td style={{textAlign:'right',fontWeight:800,color:'#1C2E26'}}>{fmt(inv.amount)} ₽</td>
-                  <td className="text-muted">{inv.invoice_num||'—'}</td>
-                  <td className="text-muted">{inv.invoice_date?new Date(inv.invoice_date).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—'}</td>
-                  <td>
-                    <span style={{fontSize:10,padding:'2px 7px',borderRadius:6,fontWeight:700,background:inv.has_receipt?'#D8EED8':'#EEE4C8',color:inv.has_receipt?'#1A4A28':'#6A4A10'}}>
-                      {inv.has_receipt?'Есть':'Нет'}
-                    </span>
+                  <td style={{padding:'9px 14px',fontWeight:600,borderBottom:'0.5px solid rgba(74,111,82,0.07)'}}>{inv.month}</td>
+                  <td style={{padding:'9px 14px',fontWeight:700,borderBottom:'0.5px solid rgba(74,111,82,0.07)'}}>{inv.sewers?.name}</td>
+                  <td style={{padding:'9px 14px',textAlign:'right',fontWeight:800,color:'#1C2E26',borderBottom:'0.5px solid rgba(74,111,82,0.07)'}}>{fmt(inv.amount)} ₽</td>
+                  <td style={{padding:'9px 14px',color:'#7A6A5A',borderBottom:'0.5px solid rgba(74,111,82,0.07)'}}>{inv.invoice_num||'—'}</td>
+                  <td style={{padding:'9px 14px',color:'#7A6A5A',borderBottom:'0.5px solid rgba(74,111,82,0.07)'}}>
+                    {inv.invoice_date?new Date(inv.invoice_date).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—'}
                   </td>
-                  <td>
+                  <td style={{padding:'9px 14px',borderBottom:'0.5px solid rgba(74,111,82,0.07)'}}>
+                    <select value={inv.has_receipt?'yes':'no'} onChange={e=>setReceiptStatus(inv.id,e.target.value)}
+                      style={{fontSize:11,padding:'3px 6px',borderRadius:6,border:'1px solid rgba(74,111,82,0.25)',background:'#fff',cursor:'pointer',fontWeight:700,color:'#1C2E26'}}>
+                      <option value="no">Нет</option>
+                      <option value="yes">Есть</option>
+                    </select>
+                  </td>
+                  <td style={{padding:'9px 14px',borderBottom:'0.5px solid rgba(74,111,82,0.07)'}}>
                     <select value={inv.status} onChange={e=>setInvStatus(inv.id,e.target.value)}
                       style={{fontSize:11,padding:'3px 6px',borderRadius:6,border:'1px solid rgba(74,111,82,0.25)',background:'#fff',cursor:'pointer',fontWeight:700,color:'#1C2E26'}}>
                       <option value="unpaid">Не оплачено</option>
                       <option value="paid">Оплачено</option>
                     </select>
                   </td>
-                  <td className="text-muted">{inv.paid_date?new Date(inv.paid_date).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—'}</td>
+                  <td style={{padding:'9px 14px',color:'#7A6A5A',borderBottom:'0.5px solid rgba(74,111,82,0.07)'}}>
+                    {inv.paid_date?new Date(inv.paid_date).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—'}
+                  </td>
+                  <td style={{padding:'9px 14px',borderBottom:'0.5px solid rgba(74,111,82,0.07)'}}>
+                    <button onClick={()=>deleteInvoice(inv.id)}
+                      style={{fontSize:11,padding:'3px 8px',borderRadius:6,border:'1px solid #EED4DD',background:'#EED4DD',color:'#6A1030',cursor:'pointer',fontWeight:700}}>
+                      Удалить
+                    </button>
+                  </td>
                 </tr>
               ))}
-              {invoices.length===0&&<tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#7A6A5A'}}>Нет счетов</td></tr>}
+              {invoices.length===0&&<tr><td colSpan={9} style={{textAlign:'center',padding:32,color:'#7A6A5A'}}>Нет счетов</td></tr>}
             </tbody>
           </table>
         </div>
@@ -204,70 +237,70 @@ export default function Documents(){
 
       {activeTab==='add'&&(
         <div style={{maxWidth:500}}>
-          <div className="card">
-            <div className="card-title">Добавить счёт или чек</div>
-            <div className="form-grid fg2" style={{marginBottom:10}}>
-              <div className="form-group"><label className="form-label">Швея</label>
-                <select value={invWho} onChange={e=>setInvWho(e.target.value)}>
+          <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',padding:'20px 22px'}}>
+            <div style={{fontSize:15,fontWeight:700,color:'#1C2E26',marginBottom:16}}>Добавить счёт</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
+              <div>
+                <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>Швея</div>
+                <select value={invWho} onChange={e=>setInvWho(e.target.value)}
+                  style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13}}>
                   {sewers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
-              <div className="form-group"><label className="form-label">Месяц</label>
-                <select value={invMonth} onChange={e=>setInvMonth(e.target.value)}>
+              <div>
+                <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>Месяц</div>
+                <select value={invMonth} onChange={e=>setInvMonth(e.target.value)}
+                  style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13}}>
                   {MONTHS.map(m=><option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
-              <div className="form-group"><label className="form-label">Тип</label>
-                <select value={invType} onChange={e=>setInvType(e.target.value)}>
-                  <option value="invoice">Счёт</option>
-                  <option value="receipt">Чек</option>
-                </select>
+              <div>
+                <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>№ счёта</div>
+                <input type="text" value={invNum} onChange={e=>setInvNum(e.target.value)} placeholder="№ 42"
+                  style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13}}/>
               </div>
-              <div className="form-group"><label className="form-label">№ документа</label>
-                <input type="text" value={invNum} onChange={e=>setInvNum(e.target.value)} placeholder="№ 42"/>
+              <div>
+                <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>Сумма, ₽</div>
+                <input type="number" value={invSum} onChange={e=>setInvSum(e.target.value)} placeholder="0"
+                  style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13}}/>
               </div>
-              <div className="form-group"><label className="form-label">Сумма, ₽</label>
-                <input type="number" value={invSum} onChange={e=>setInvSum(e.target.value)} placeholder="0"/>
-              </div>
-              <div className="form-group"><label className="form-label">Дата</label>
-                <input type="date" value={invDate} onChange={e=>setInvDate(e.target.value)}/>
+              <div>
+                <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>Дата</div>
+                <input type="date" value={invDate} onChange={e=>setInvDate(e.target.value)}
+                  style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13}}/>
               </div>
             </div>
-            <button onClick={addInvoice} className="btn btn-primary">Добавить в реестр</button>
-            {invFb&&<div className="mt-8 text-green text-sm" style={{fontWeight:700}}>{invFb}</div>}
+            <button onClick={addInvoice} style={{padding:'8px 20px',background:'#1C2E26',color:'#C4A882',border:'none',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer'}}>
+              Добавить в реестр
+            </button>
+            {invFb&&<div style={{marginTop:10,fontSize:12,color:'#1A6B28',fontWeight:700}}>{invFb}</div>}
           </div>
         </div>
       )}
 
       {actPopup&&(
-        <div className="popup-overlay" onClick={()=>setActPopup(null)}>
-          <div className="popup" style={{width:580}} onClick={e=>e.stopPropagation()}>
-            <div className="popup-header">
-              <span className="popup-title">Акт — {actPopup.sewer.name} — {actPopup.month}</span>
-              <button className="popup-close" onClick={()=>setActPopup(null)}>×</button>
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}} onClick={()=>setActPopup(null)}>
+          <div style={{background:'#fff',borderRadius:16,width:580,maxHeight:'90vh',overflow:'auto',padding:'24px'}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+              <span style={{fontWeight:800,fontSize:16,color:'#1C2E26'}}>Акт — {actPopup.sewer.name} — {actPopup.month}</span>
+              <button onClick={()=>setActPopup(null)} style={{fontSize:20,background:'none',border:'none',cursor:'pointer',color:'#7A6A5A'}}>×</button>
             </div>
-            <div className="popup-body" style={{fontSize:13,lineHeight:1.7}}>
+            <div style={{fontSize:13,lineHeight:1.7}}>
               <div style={{textAlign:'center',fontWeight:800,fontSize:16,marginBottom:4}}>Акт выполненных работ</div>
               <div style={{textAlign:'center',color:'#7A6A5A',fontWeight:600,marginBottom:16}}>
-                {actPopup.inv?.invoice_num||'№ ___'} от «{MONTH_DATE[actPopup.month]?.split(' ')[0]||'__'}» {MONTH_SHORT[actPopup.month]||''} 2026 г. &nbsp; г. Тюмень
+                {actPopup.inv?.invoice_num||'№ ___'} от «{MONTH_DATE[actPopup.month]?.split(' ')[0]||'__'}» {MONTH_SHORT[actPopup.month]||''} 2026 г. г. Тюмень
               </div>
               <p style={{marginBottom:8,fontWeight:600}}>Мы, нижеподписавшиеся:</p>
               <p style={{marginBottom:8}}><strong>{CUSTOMER.name}</strong>, ИНН {CUSTOMER.inn}, адрес: {CUSTOMER.address}</p>
-              <p style={{marginBottom:16}}>
-                и <strong>Самозанятое лицо {actPopup.sewer.full_name||actPopup.sewer.name}</strong>
-                {actPopup.sewer.inn?`, ИНН ${actPopup.sewer.inn}`:''}
-                {actPopup.sewer.address?`, адрес: ${actPopup.sewer.address}`:''}
-              </p>
-              <p style={{marginBottom:12,fontWeight:600}}>
-                По договору № {actPopup.sewer.contract_num||'—'} от «{actPopup.sewer.contract_date?new Date(actPopup.sewer.contract_date).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'}):'—'}» исполнитель выполнил услугу пошива аксессуара для волос (Кокошника).
-              </p>
+              <p style={{marginBottom:16}}>и <strong>Самозанятое лицо {actPopup.sewer.full_name||actPopup.sewer.name}</strong>{actPopup.sewer.inn?`, ИНН ${actPopup.sewer.inn}`:''}{actPopup.sewer.address?`, адрес: ${actPopup.sewer.address}`:''}</p>
+              <p style={{marginBottom:12,fontWeight:600}}>По договору № {actPopup.sewer.contract_num||'—'} от «{actPopup.sewer.contract_date?new Date(actPopup.sewer.contract_date).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'}):'—'}» исполнитель выполнил услугу пошива аксессуара для волос (Кокошника).</p>
               <table style={{width:'100%',borderCollapse:'collapse',marginBottom:12,fontSize:12}}>
                 <thead>
                   <tr style={{background:'#F5F0E8'}}>
-                    <th style={{textAlign:'left',padding:'6px 10px',border:'1px solid rgba(196,168,130,0.3)',fontWeight:700}}>Наименование</th>
-                    <th style={{textAlign:'center',padding:'6px 10px',border:'1px solid rgba(196,168,130,0.3)',fontWeight:700}}>Кол-во, шт</th>
-                    <th style={{textAlign:'right',padding:'6px 10px',border:'1px solid rgba(196,168,130,0.3)',fontWeight:700}}>Цена</th>
-                    <th style={{textAlign:'right',padding:'6px 10px',border:'1px solid rgba(196,168,130,0.3)',fontWeight:700}}>Сумма</th>
+                    <th style={{padding:'6px 10px',border:'1px solid rgba(196,168,130,0.3)',fontWeight:700,textAlign:'left'}}>Наименование</th>
+                    <th style={{padding:'6px 10px',border:'1px solid rgba(196,168,130,0.3)',fontWeight:700,textAlign:'center'}}>Кол-во, шт</th>
+                    <th style={{padding:'6px 10px',border:'1px solid rgba(196,168,130,0.3)',fontWeight:700,textAlign:'right'}}>Цена</th>
+                    <th style={{padding:'6px 10px',border:'1px solid rgba(196,168,130,0.3)',fontWeight:700,textAlign:'right'}}>Сумма</th>
                   </tr>
                 </thead>
                 <tbody>

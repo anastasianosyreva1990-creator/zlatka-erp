@@ -195,8 +195,8 @@ export default function Wildberries(){
                           <div style={{fontSize:10,color:'rgba(196,168,130,0.7)',marginTop:1}}>{wh.fo}</div>
                         </div>
                         <div style={{textAlign:'right'}}>
-                          <div style={{fontSize:12,color:'#C4A882',fontWeight:800}}>~{lc} ₽/шт</div>
-                          <div style={{fontSize:10,color:'rgba(196,168,130,0.5)'}}>логистика WB</div>
+                          <div style={{fontSize:14,color:'#C4A882',fontWeight:800}}>~{lc} ₽/шт</div>
+                          <div style={{fontSize:11,color:'rgba(196,168,130,0.8)',fontWeight:600}}>логистика WB</div>
                         </div>
                       </div>
                       <div style={{padding:'8px 14px'}}>
