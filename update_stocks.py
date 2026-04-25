@@ -4,7 +4,18 @@ from supabase import create_client
 
 SUPABASE_URL = 'https://eqakagcbrzqfbsrgzaeh.supabase.co'
 SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxYWthZ2NicnpxZmJzcmd6YWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MTQ4NzgsImV4cCI6MjA5MTk5MDg3OH0.Hgv8sVv4lctRLzxbrsvYt8kg-IRKVeRMjXl6fq9Ytew'
-WB_TOKEN = os.environ.get('WB_TOKEN') or open('/workspaces/zlatka-erp/.env').read().split('VITE_WB_TOKEN=')[1].strip()
+
+WB_TOKEN = os.environ.get('WB_TOKEN')
+if not WB_TOKEN:
+    try:
+        for line in open('/workspaces/zlatka-erp/.env').readlines():
+            if line.startswith('VITE_WB_TOKEN='):
+                WB_TOKEN = line.split('=', 1)[1].strip()
+                break
+    except:
+        pass
+
+print(f'Токен получен: {bool(WB_TOKEN)}')
 
 SKUS = {539619113:'Кокошник Красный',546758919:'Кокошник Белый',539628943:'Кокошник Черный',546766746:'Кокошник Цветной'}
 
@@ -32,15 +43,20 @@ for s in kok:
     if not wh: continue
     prod = SKUS[s['nmId']]
     key = f'{wh}:{prod}'
-    if key not in by_wh: by_wh[key] = {'warehouse':wh,'product':prod,'quantity':0}
-    by_wh[key]['quantity'] += s.get('quantity',0)
+    if key not in by_wh:
+        by_wh[key] = {'warehouse':wh,'product':prod,'quantity':0,'in_way_to_client':0,'in_way_from_client':0}
+    by_wh[key]['quantity'] += s.get('quantity', 0)
+    by_wh[key]['in_way_to_client'] += s.get('inWayToClient', 0)
+    by_wh[key]['in_way_from_client'] += s.get('inWayFromClient', 0)
 
 for key, data in by_wh.items():
-    print(f"{data['warehouse']} / {data['product']}: {data['quantity']} шт")
+    print(f"{data['warehouse']} / {data['product']}: {data['quantity']} шт (к клиенту: {data['in_way_to_client']}, от клиента: {data['in_way_from_client']})")
     sb.table('wb_stocks').upsert({
         'warehouse': data['warehouse'],
         'product': data['product'],
         'quantity': data['quantity'],
+        'in_way_to_client': data['in_way_to_client'],
+        'in_way_from_client': data['in_way_from_client'],
         'updated_at': datetime.now().isoformat()
     }, on_conflict='warehouse,product').execute()
 
@@ -59,7 +75,8 @@ for s in kok_sales:
     if not wh: continue
     prod = SKUS[s['nmId']]
     key = f'{wh}:{prod}'
-    if key not in by_wh_sales: by_wh_sales[key] = {'warehouse':wh,'product':prod,'sales_14d':0}
+    if key not in by_wh_sales:
+        by_wh_sales[key] = {'warehouse':wh,'product':prod,'sales_14d':0}
     by_wh_sales[key]['sales_14d'] += 1
 
 for key, data in by_wh_sales.items():
