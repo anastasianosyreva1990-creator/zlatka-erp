@@ -5,6 +5,7 @@ const fmt = x => Math.round(x).toLocaleString('ru-RU')
 const PCOL = {'Кокошник Красный':'#C0392B','Кокошник Белый':'#7F8C8D','Кокошник Черный':'#2C3E50','Кокошник Цветной':'#27AE60'}
 const PLBL = {'Кокошник Красный':'Красный','Кокошник Белый':'Белый','Кокошник Черный':'Чёрный','Кокошник Цветной':'Цветной'}
 const PRODUCTS = Object.keys(PCOL)
+const MIN_STOCK = 50
 
 const MAT_COST = {
   'Кокошник Красный': 0.0476*288.16 + 0.2*20.09 + 2*0.83 + 30 + 1.19 + 10.90,
@@ -24,18 +25,12 @@ const WHS = [
   {id:'ryazan',name:'Рязань',fo:'Центральный',tariff:130},
 ]
 
-const DAILY = {
-  'Кокошник Красный': 515/14,
-  'Кокошник Белый':   63/14,
-  'Кокошник Черный':  164/14,
-  'Кокошник Цветной': 19/14,
-}
-
 export default function Batches() {
   const [batches, setBatches] = useState([])
   const [batchItems, setBatchItems] = useState([])
   const [sewers, setSewers] = useState([])
   const [wbStocks, setWbStocks] = useState([])
+  const [wbSales, setWbSales] = useState([])
   const [readyStock, setReadyStock] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('active')
@@ -53,18 +48,20 @@ export default function Batches() {
 
   async function loadAll() {
     setLoading(true)
-    const [{ data: b }, { data: bi }, { data: sw }, { data: wb }, { data: rs }] = await Promise.all([
+    const [{ data: b }, { data: bi }, { data: sw }, { data: wb }, { data: rs }, { data: ws }] = await Promise.all([
       supabase.from('batches').select('*').order('created_at', { ascending: false }),
       supabase.from('batch_items').select('*, sewers(name, tariff)'),
       supabase.from('sewers').select('*').eq('active', true),
       supabase.from('wb_stocks').select('*'),
       supabase.from('ready_stock').select('*'),
+      supabase.from('wb_sales_by_wh').select('*'),
     ])
     setBatches(b || [])
     setBatchItems(bi || [])
     setSewers(sw || [])
     setWbStocks(wb || [])
     setReadyStock(rs || [])
+    setWbSales(ws || [])
     setLoading(false)
   }
 
@@ -76,10 +73,8 @@ export default function Batches() {
     return wbStocks.find(s => s.warehouse === whId && s.product === prod)?.quantity || 0
   }
 
-  function daysLeft(whId, prod) {
-    const qty = getWbStock(whId, prod)
-    const spd = DAILY[prod] || 1
-    return Math.floor(qty / spd)
+  function getDailyRate(whId, prod) {
+    return wbSales.find(s => s.warehouse === whId && s.product === prod)?.daily_rate || 0
   }
 
   function batchByColor(batchId) {
@@ -111,44 +106,56 @@ export default function Batches() {
   }
 
   function calcGlobalRecommendation() {
-    const toShip = []
-    const toProduce = []
     const available = {}
     PRODUCTS.forEach(p => available[p] = getReadyQty(p))
 
+    // Считаем дефицит по всем складам и цветам
+    const allDeficits = []
     WHS.forEach(wh => {
-      const canShip = {}
-      const needProduce = {}
       PRODUCTS.forEach(prod => {
-        if (DAILY[prod] < 0.3) return
         const qty = getWbStock(wh.id, prod)
-        const needFor14Days = Math.ceil(DAILY[prod] * 14)
+        const dailyRate = getDailyRate(wh.id, prod)
+        const needByRate = dailyRate > 0.1 ? Math.ceil(dailyRate * 14) : 0
+        const needFor14Days = Math.max(needByRate, MIN_STOCK)
         const deficit = Math.max(0, needFor14Days - qty)
-        if (deficit <= 0) return
-        const avail = available[prod] || 0
-        if (avail > 0) canShip[prod] = Math.min(deficit, avail)
-        else needProduce[prod] = deficit
+        if (deficit > 0) {
+          // Срочность: 0 на складе = очень срочно
+          const urgency = qty === 0 ? 9999 : deficit
+          allDeficits.push({ wh, prod, deficit, urgency })
+        }
       })
-      if (Object.keys(canShip).length > 0) {
-        const total = Object.values(canShip).reduce((a, b) => a + b, 0)
-        if (total >= 5) toShip.push({ warehouse: wh, composition: canShip, total })
-      }
-      if (Object.keys(needProduce).length > 0) {
-        const total = Object.values(needProduce).reduce((a, b) => a + b, 0)
-        toProduce.push({ warehouse: wh, composition: needProduce, total })
+    })
+
+    // Сортируем по срочности — самые критичные сначала
+    allDeficits.sort((a, b) => b.urgency - a.urgency)
+
+    // Распределяем доступный товар
+    const whShip = {}
+    const toProduce = {}
+
+    allDeficits.forEach(({ wh, prod, deficit }) => {
+      const avail = available[prod] || 0
+      if (avail > 0) {
+        const toGive = Math.min(deficit, avail)
+        if (!whShip[wh.id]) whShip[wh.id] = { warehouse: wh, composition: {}, total: 0 }
+        whShip[wh.id].composition[prod] = (whShip[wh.id].composition[prod] || 0) + toGive
+        whShip[wh.id].total += toGive
+        available[prod] -= toGive
+        if (toGive < deficit) {
+          toProduce[prod] = (toProduce[prod] || 0) + (deficit - toGive)
+        }
+      } else {
+        toProduce[prod] = (toProduce[prod] || 0) + deficit
       }
     })
 
-    const used = {}
-    PRODUCTS.forEach(p => used[p] = 0)
-    toShip.forEach(s => Object.entries(s.composition).forEach(([p, q]) => used[p] = (used[p] || 0) + q))
+    const toShipList = Object.values(whShip).filter(w => w.total >= 5)
+    const toProduceList = Object.entries(toProduce).map(([prod, qty]) => ({ prod, qty }))
+
     const remaining = {}
-    PRODUCTS.forEach(p => {
-      const leftover = (available[p] || 0) - (used[p] || 0)
-      if (leftover > 0) remaining[p] = leftover
-    })
+    PRODUCTS.forEach(p => { if (available[p] > 0) remaining[p] = available[p] })
 
-    return { toShip, toProduce, remaining }
+    return { toShip: toShipList, toProduce: toProduceList, remaining }
   }
 
   async function setStatus(id, val) {
@@ -205,7 +212,7 @@ export default function Batches() {
         })
       }
     }
-    setNewFb(`✓ Партия создана`)
+    setNewFb('✓ Партия создана')
     setTimeout(() => { setNewPopup(false); setNewFb(''); setCustomComposition({}); setSelectedWh(''); loadAll() }, 1500)
   }
 
@@ -385,7 +392,7 @@ export default function Batches() {
               <button onClick={() => setRecPopup(false)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
             </div>
             <div style={{ fontSize: 12, color: '#6A4A10', background: '#EEE4C8', padding: '10px 12px', borderRadius: 8, marginBottom: 16 }}>
-              ⓘ Потребность на 14 дней по каждому складу WB с учётом текущих остатков и темпа продаж.
+              ⓘ Минимум {MIN_STOCK} шт на каждом складе для поддержания локализации. Приоритет — склады где 0 остаток.
             </div>
             {(() => {
               const rec = calcGlobalRecommendation()
@@ -394,7 +401,7 @@ export default function Batches() {
                   {rec.toShip.length > 0 && (
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 12, fontWeight: 800, color: '#1A4A28', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                        📦 Отгрузить сейчас (есть на складе)
+                        📦 Отгрузить сейчас
                       </div>
                       {rec.toShip.map((item, i) => (
                         <div key={i} style={{ background: '#D8EED8', borderRadius: 10, padding: '12px 14px', marginBottom: 8 }}>
@@ -421,33 +428,29 @@ export default function Batches() {
                   {rec.toProduce.length > 0 && (
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 12, fontWeight: 800, color: '#185FA5', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                        🧵 Произвести (нет на складе, но нужно)
+                        🧵 Произвести дополнительно
                       </div>
-                      {rec.toProduce.map((item, i) => (
-                        <div key={i} style={{ background: '#E6F1FB', borderRadius: 10, padding: '12px 14px', marginBottom: 8 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                            <div>
-                              <div style={{ fontSize: 14, fontWeight: 800, color: '#1C2E26' }}>{item.warehouse.name}</div>
-                              <div style={{ fontSize: 11, color: '#5A4A3A' }}>{item.warehouse.fo} ФО</div>
-                            </div>
-                            <div style={{ fontSize: 18, fontWeight: 800, color: '#185FA5' }}>{item.total} шт</div>
-                          </div>
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            {Object.entries(item.composition).map(([prod, q]) => (
-                              <span key={prod} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, padding: '3px 8px', background: '#fff', borderRadius: 6 }}>
-                                <span style={{ width: 7, height: 7, borderRadius: '50%', background: PCOL[prod] }}></span>
-                                {PLBL[prod]} {q} шт
-                              </span>
-                            ))}
-                          </div>
+                      <div style={{ background: '#E6F1FB', borderRadius: 10, padding: '12px 14px' }}>
+                        <div style={{ fontSize: 12, color: '#5A4A3A', marginBottom: 10 }}>
+                          Не хватает для покрытия всех складов на 14 дней (мин. {MIN_STOCK} шт/склад):
                         </div>
-                      ))}
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {rec.toProduce.map(({ prod, qty }) => (
+                            <div key={prod} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, padding: '6px 12px', background: '#fff', borderRadius: 8, border: '1px solid #185FA5' }}>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: PCOL[prod] }}></span>
+                              {PLBL[prod]}: {fmt(qty)} шт
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   )}
 
                   {Object.keys(rec.remaining).length > 0 && (
                     <div style={{ background: '#F5F0E8', borderRadius: 8, padding: '10px 12px', marginBottom: 10 }}>
-                      <div style={{ fontSize: 12, color: '#7A6A5A', fontWeight: 700, marginBottom: 6 }}>💤 Пока не отгружать — нет потребности:</div>
+                      <div style={{ fontSize: 12, color: '#7A6A5A', fontWeight: 700, marginBottom: 6 }}>
+                        💤 Пока не отгружать — все склады обеспечены:
+                      </div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {Object.entries(rec.remaining).map(([prod, q]) => (
                           <span key={prod} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, padding: '3px 8px', background: '#fff', borderRadius: 6 }}>
@@ -461,7 +464,7 @@ export default function Batches() {
 
                   {rec.toShip.length === 0 && rec.toProduce.length === 0 && (
                     <div style={{ textAlign: 'center', padding: 24, color: '#7A6A5A', fontSize: 13 }}>
-                      Все склады WB обеспечены на 14 дней вперёд 🎉
+                      Все склады WB обеспечены 🎉
                     </div>
                   )}
                 </>
@@ -479,7 +482,6 @@ export default function Batches() {
               <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>Новая партия</span>
               <button onClick={() => setNewPopup(false)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
             </div>
-
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 11, color: '#7A6A5A', fontWeight: 700, marginBottom: 6 }}>Размер партии</div>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -493,7 +495,6 @@ export default function Batches() {
                 ))}
               </div>
             </div>
-
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 11, color: '#7A6A5A', fontWeight: 700, marginBottom: 6 }}>Состав партии</div>
               {PRODUCTS.map(prod => {
@@ -514,7 +515,6 @@ export default function Batches() {
                 <strong>{Object.values(customComposition).reduce((a, b) => a + (b || 0), 0)} / {batchSize} шт</strong>
               </div>
             </div>
-
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 11, color: '#7A6A5A', fontWeight: 700, marginBottom: 6 }}>Склад WB</div>
               <select value={selectedWh} onChange={e => setSelectedWh(e.target.value)}
@@ -523,7 +523,6 @@ export default function Batches() {
                 {WHS.map(w => <option key={w.id} value={w.id}>{w.name} ({w.fo})</option>)}
               </select>
             </div>
-
             <button onClick={createBatch}
               style={{ width: '100%', padding: '10px', background: '#1C2E26', color: '#C4A882', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
               Создать партию
