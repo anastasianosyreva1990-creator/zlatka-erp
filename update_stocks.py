@@ -1,4 +1,5 @@
 import os, requests
+from datetime import datetime, timedelta
 from supabase import create_client
 
 SUPABASE_URL = 'https://eqakagcbrzqfbsrgzaeh.supabase.co'
@@ -8,44 +9,30 @@ WB_TOKEN = os.environ.get('WB_TOKEN') or open('/workspaces/zlatka-erp/.env').rea
 SKUS = {539619113:'Кокошник Красный',546758919:'Кокошник Белый',539628943:'Кокошник Черный',546766746:'Кокошник Цветной'}
 
 WH_MAP = {
-  'Екатеринбург - Перспективная 14': 'ekb',
-  'Екатеринбург': 'ekb',
-  'Владимир': 'vlad',
-  'Воронеж': 'voronezh',
-  'Котовск': 'kotovsk',
-  'Самара (Новосемейкино)': 'novosem',
-  'Новосемейкино': 'novosem',
-  'Волгоград': 'volgograd',
-  'Рязань (Тюшевское)': 'ryazan',
-  'Рязань': 'ryazan',
-  'Невинномысск': 'nevinnomyssk',
+  'Екатеринбург - Перспективная 14':'ekb','Екатеринбург':'ekb',
+  'Владимир':'vlad','Воронеж':'voronezh','Котовск':'kotovsk',
+  'Самара (Новосемейкино)':'novosem','Новосемейкино':'novosem',
+  'Волгоград':'volgograd','Рязань (Тюшевское)':'ryazan','Рязань':'ryazan',
+  'Невинномысск':'nevinnomyssk',
 }
 
 sb = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-from datetime import datetime, timedelta
-date_from = '2025-01-01'
-
+# 1. Обновляем остатки
+print('=== Остатки ===')
 r = requests.get('https://statistics-api.wildberries.ru/api/v1/supplier/stocks',
-  headers={'Authorization': WB_TOKEN}, params={'dateFrom': date_from})
-
+  headers={'Authorization': WB_TOKEN}, params={'dateFrom': '2025-01-01'})
 stocks = r.json()
-print(f'Получено записей: {len(stocks)}')
-
 kok = [s for s in stocks if s.get('nmId') in SKUS]
 print(f'Кокошников: {len(kok)}')
 
-# Группируем по складу и артикулу
 by_wh = {}
 for s in kok:
-    wh = s.get('warehouseName','')
-    wh_id = WH_MAP.get(wh)
-    if not wh_id:
-        continue
+    wh = WH_MAP.get(s.get('warehouseName',''))
+    if not wh: continue
     prod = SKUS[s['nmId']]
-    key = f'{wh_id}:{prod}'
-    if key not in by_wh:
-        by_wh[key] = {'warehouse':wh_id,'product':prod,'quantity':0}
+    key = f'{wh}:{prod}'
+    if key not in by_wh: by_wh[key] = {'warehouse':wh,'product':prod,'quantity':0}
     by_wh[key]['quantity'] += s.get('quantity',0)
 
 for key, data in by_wh.items():
@@ -57,4 +44,33 @@ for key, data in by_wh.items():
         'updated_at': datetime.now().isoformat()
     }, on_conflict='warehouse,product').execute()
 
-print('Готово!')
+# 2. Обновляем темп продаж по складам
+print('\n=== Продажи по складам (14 дней) ===')
+date_from = (datetime.now() - timedelta(days=14)).strftime('%Y-%m-%dT00:00:00')
+r2 = requests.get('https://statistics-api.wildberries.ru/api/v1/supplier/sales',
+  headers={'Authorization': WB_TOKEN}, params={'dateFrom': date_from, 'flag': 0})
+sales = r2.json()
+kok_sales = [s for s in sales if s.get('nmId') in SKUS and s.get('saleID','').startswith('S')]
+print(f'Продаж: {len(kok_sales)}')
+
+by_wh_sales = {}
+for s in kok_sales:
+    wh = WH_MAP.get(s.get('warehouseName',''))
+    if not wh: continue
+    prod = SKUS[s['nmId']]
+    key = f'{wh}:{prod}'
+    if key not in by_wh_sales: by_wh_sales[key] = {'warehouse':wh,'product':prod,'sales_14d':0}
+    by_wh_sales[key]['sales_14d'] += 1
+
+for key, data in by_wh_sales.items():
+    daily = round(data['sales_14d'] / 14, 2)
+    print(f"{data['warehouse']} / {data['product']}: {data['sales_14d']} за 14д = {daily}/день")
+    sb.table('wb_sales_by_wh').upsert({
+        'warehouse': data['warehouse'],
+        'product': data['product'],
+        'sales_14d': data['sales_14d'],
+        'daily_rate': daily,
+        'updated_at': datetime.now().isoformat()
+    }, on_conflict='warehouse,product').execute()
+
+print('\nГотово!')
