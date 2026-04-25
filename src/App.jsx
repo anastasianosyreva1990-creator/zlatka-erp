@@ -10,6 +10,7 @@ import Finance from './pages/Finance'
 import Documents from './pages/Documents'
 import Login from './pages/Login'
 import SewerDashboard from './pages/SewerDashboard'
+import * as XLSX from 'xlsx'
 import './index.css'
 
 const NAV_ITEMS = [
@@ -21,9 +22,162 @@ const NAV_ITEMS = [
   { to: '/docs', label: 'Документы' },
 ]
 
+async function exportToExcel() {
+  const wb = XLSX.utils.book_new()
+
+  const [
+    { data: orders },
+    { data: shipments },
+    { data: wbStocks },
+    { data: productions },
+    { data: purchases },
+    { data: wbMonthly },
+    { data: wbPayouts },
+    { data: sewers },
+  ] = await Promise.all([
+    supabase.from('wb_orders').select('*').order('date'),
+    supabase.from('shipments').select('*').order('ship_date'),
+    supabase.from('wb_stocks').select('*'),
+    supabase.from('productions').select('*, sewers(name, tariff)').order('date'),
+    supabase.from('purchases').select('*, materials(name, unit)').order('order_date'),
+    supabase.from('wb_monthly').select('*').order('month'),
+    supabase.from('wb_payouts').select('*').order('payout_date'),
+    supabase.from('sewers').select('*'),
+  ])
+
+  // 1. Заказы WB
+  if (orders?.length) {
+    const ws = XLSX.utils.json_to_sheet(orders.map(o => ({
+      'Дата': o.date,
+      'Красный': o.red,
+      'Белый': o.white,
+      'Черный': o.black,
+      'Цветной': o.color,
+      'Итого': o.red + o.white + o.black + o.color,
+    })))
+    XLSX.utils.book_append_sheet(wb, ws, 'Заказы WB')
+  }
+
+  // 2. Отгрузки
+  if (shipments?.length) {
+    const ws = XLSX.utils.json_to_sheet(shipments.map(s => ({
+      'Дата сдачи': s.ship_date,
+      'Товар': s.product,
+      'Количество': s.quantity,
+      'Склад WB': s.warehouse,
+      'ТК': s.tk,
+      '№ Накладной': s.invoice_num,
+      '№ Поставки WB': s.wb_supply_num,
+      'ШК Короба': s.shk_box,
+      'Дата прихода': s.arrival_date,
+      'Статус': s.status,
+    })))
+    XLSX.utils.book_append_sheet(wb, ws, 'Отгрузки')
+  }
+
+  // 3. Остатки WB
+  if (wbStocks?.length) {
+    const ws = XLSX.utils.json_to_sheet(wbStocks.map(s => ({
+      'Склад': s.warehouse,
+      'Товар': s.product,
+      'Остаток': s.quantity,
+      'В пути к клиенту': s.in_way_to_client || 0,
+      'От клиента': s.in_way_from_client || 0,
+      'Обновлено': s.updated_at,
+    })))
+    XLSX.utils.book_append_sheet(wb, ws, 'Остатки WB')
+  }
+
+  // 4. Производство
+  if (productions?.length) {
+    const ws = XLSX.utils.json_to_sheet(productions.map(p => ({
+      'Дата': p.date,
+      'Швея': p.sewers?.name,
+      'Изделие': p.product,
+      'Количество': p.quantity,
+      'Тариф': p.sewers?.tariff,
+      'Начислено': p.earned,
+    })))
+    XLSX.utils.book_append_sheet(wb, ws, 'Производство')
+  }
+
+  // 5. Закупки
+  if (purchases?.length) {
+    const ws = XLSX.utils.json_to_sheet(purchases.map(p => ({
+      'Дата': p.order_date,
+      'Материал': p.materials?.name,
+      'Количество': p.quantity,
+      'Ед.': p.materials?.unit,
+      'Сумма': p.total_sum,
+      'Цена/ед': p.price_per_unit,
+      'Поставщик': p.supplier,
+      'Статус': p.status === 'delivered' ? 'Получено' : p.status === 'transit' ? 'В пути' : 'Заказано',
+    })))
+    XLSX.utils.book_append_sheet(wb, ws, 'Закупки')
+  }
+
+  // 6. Финансы по месяцам
+  if (wbMonthly?.length) {
+    const ws = XLSX.utils.json_to_sheet(wbMonthly.map(d => ({
+      'Месяц': d.month,
+      'Выручка WB': d.revenue,
+      'Логистика продажи': d.log_sale,
+      'Логистика отмены': d.log_cancel,
+      'Комиссия ВВ': d.vv,
+      'Штрафы': d.shtraf,
+      'Продано Красных': d.sold_red,
+      'Продано Белых': d.sold_white,
+      'Продано Черных': d.sold_black,
+      'Продано Цветных': d.sold_color,
+    })))
+    XLSX.utils.book_append_sheet(wb, ws, 'Финансы')
+  }
+
+  // 7. Выплаты WB
+  if (wbPayouts?.length) {
+    const ws = XLSX.utils.json_to_sheet(wbPayouts.map(p => ({
+      'Дата выплаты': p.payout_date,
+      'Период начала': p.period_start,
+      'Период конца': p.period_end,
+      'Сумма': p.net_amount,
+      '№ Отчёта': p.report_num,
+    })))
+    XLSX.utils.book_append_sheet(wb, ws, 'Выплаты WB')
+  }
+
+  // 8. Зарплаты по месяцам
+  if (productions?.length && sewers?.length) {
+    const months = [...new Set(productions.map(p => p.date?.slice(0, 7)))].sort()
+    const rows = []
+    sewers.forEach(sw => {
+      months.forEach(month => {
+        const prods = productions.filter(p => p.sewer_id === sw.id && p.date?.startsWith(month))
+        const qty = prods.reduce((a, p) => a + p.quantity, 0)
+        if (qty > 0) {
+          rows.push({
+            'Месяц': month,
+            'Швея': sw.name,
+            'Тариф': sw.tariff,
+            'Сдано шт': qty,
+            'Начислено': qty * sw.tariff,
+          })
+        }
+      })
+    })
+    if (rows.length) {
+      const ws = XLSX.utils.json_to_sheet(rows)
+      XLSX.utils.book_append_sheet(wb, ws, 'Зарплаты')
+    }
+  }
+
+  const date = new Date().toISOString().split('T')[0]
+  XLSX.writeFile(wb, `zlatka_export_${date}.xlsx`)
+}
+
 export default function App() {
   const [user, setUser] = useState(undefined)
   const [profile, setProfile] = useState(null)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -45,6 +199,16 @@ export default function App() {
 
   async function handleLogout() {
     await signOut()
+  }
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      await exportToExcel()
+    } catch(e) {
+      alert('Ошибка экспорта: ' + e.message)
+    }
+    setExporting(false)
   }
 
   if (user === undefined) return (
@@ -92,6 +256,16 @@ export default function App() {
             ))}
           </div>
           <div style={{ padding:'0 10px 10px' }}>
+            <button onClick={handleExport} disabled={exporting} style={{
+              width:'100%', padding:'8px 12px', borderRadius:8,
+              border:'1px solid rgba(196,168,130,0.3)',
+              background:'rgba(196,168,130,0.12)',
+              color:'rgba(196,168,130,0.9)',
+              fontSize:12, fontWeight:700, cursor:'pointer', textAlign:'left',
+              marginBottom:6
+            }}>
+              {exporting ? '⏳ Экспорт...' : '📥 Экспорт в Excel'}
+            </button>
             <button onClick={handleLogout} style={{ width:'100%', padding:'8px 12px', borderRadius:8, border:'1px solid rgba(196,168,130,0.2)', background:'rgba(196,168,130,0.08)', color:'rgba(196,168,130,0.7)', fontSize:12, fontWeight:700, cursor:'pointer', textAlign:'left' }}>
               Выйти из системы
             </button>
