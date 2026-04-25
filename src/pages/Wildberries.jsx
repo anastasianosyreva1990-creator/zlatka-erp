@@ -49,6 +49,8 @@ export default function Wildberries(){
   const [ordColor,setOrdColor]=useState('')
   const [ordFb,setOrdFb]=useState('')
   const [selMonth,setSelMonth]=useState('2026-04')
+  const [updateFb,setUpdateFb]=useState('')
+  const [updating,setUpdating]=useState(false)
 
   useEffect(()=>{loadAll()},[])
 
@@ -65,9 +67,33 @@ export default function Wildberries(){
 
   function getStock(whId,prod){return wbStocks.find(s=>s.warehouse===whId&&s.product===prod)?.quantity||0}
   function daysLeft(whId,prod){const qty=getStock(whId,prod);const spd=DAILY[prod]||1;return Math.floor(qty/spd)}
-
-  // Суммарные остатки по всем складам
   function getTotalStock(prod){return WHS.reduce((a,wh)=>a+getStock(wh.id,prod),0)}
+
+  async function runUpdate(){
+    setUpdating(true)
+    setUpdateFb('Запускаем обновление...')
+    try{
+      const token=import.meta.env.VITE_GITHUB_TOKEN
+      const r=await fetch('https://api.github.com/repos/anastasianosyreva1990-creator/zlatka-erp/actions/workflows/update_orders.yml/dispatches',{
+        method:'POST',
+        headers:{
+          'Authorization':`Bearer ${token}`,
+          'Accept':'application/vnd.github+json',
+          'Content-Type':'application/json'
+        },
+        body:JSON.stringify({ref:'main'})
+      })
+      if(r.status===204){
+        setUpdateFb('✓ Обновление запущено! Данные обновятся через ~1 минуту.')
+        setTimeout(()=>loadAll(),70000)
+      } else {
+        setUpdateFb('Ошибка запуска: ' + r.status)
+      }
+    }catch(e){
+      setUpdateFb('Ошибка: '+e.message)
+    }
+    setUpdating(false)
+  }
 
   async function addShipment(){
     if(!shQty||!shDate){setShFb('Заполните дату и количество');return}
@@ -135,10 +161,8 @@ export default function Wildberries(){
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
         <h1 style={{fontSize:22,fontWeight:800,color:'#1C2E26'}}>Wildberries / <span style={{color:'#C4A882'}}>Склады</span></h1>
-        <span style={{fontSize:10,padding:'3px 10px',borderRadius:20,background:'#EEE4C8',color:'#6A4A10',fontWeight:700}}>API не подключён</span>
       </div>
 
-      {/* Метрики */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
         {[
           {label:'Заказов в день (апр)',value:fmt(avgPerDay||54),sub:'средний темп'},
@@ -154,7 +178,6 @@ export default function Wildberries(){
         ))}
       </div>
 
-      {/* Табы */}
       <div style={{display:'flex',gap:6,marginBottom:20,flexWrap:'wrap'}}>
         <TabBtn id="signals" label="Сигналы"/>
         <TabBtn id="orders" label="Заказы"/>
@@ -162,16 +185,14 @@ export default function Wildberries(){
         <TabBtn id="update" label="Обновить остатки"/>
       </div>
 
-      {/* СИГНАЛЫ */}
       {activeTab==='signals'&&(
         <div>
-          {/* Суммарные остатки по всем складам */}
           <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',padding:'14px 18px',marginBottom:16}}>
             <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,textTransform:'uppercase',letterSpacing:0.5,marginBottom:10}}>Итого на всех складах WB</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
               {PRODUCTS.map(prod=>{
                 const total=getTotalStock(prod)
-                const days=DAILY[prod]>0?Math.floor(total/DAILY[prod]):0
+                const d=DAILY[prod]>0?Math.floor(total/DAILY[prod]):0
                 return (
                   <div key={prod} style={{background:'#F5F0E8',borderRadius:8,padding:'10px 12px'}}>
                     <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
@@ -179,14 +200,13 @@ export default function Wildberries(){
                       <span style={{fontSize:12,fontWeight:700,color:'#1C2E26'}}>{PLBL[prod]}</span>
                     </div>
                     <div style={{fontSize:20,fontWeight:800,color:'#1C2E26'}}>{fmt(total)} шт</div>
-                    <div style={{fontSize:11,color:'#7A6A5A',marginTop:2}}>~{days} дней</div>
+                    <div style={{fontSize:11,color:'#7A6A5A',marginTop:2}}>~{d} дней</div>
                   </div>
                 )
               })}
             </div>
           </div>
 
-          {/* Склады по ФО */}
           {Object.entries(foGroups).map(([fo,whs])=>(
             <div key={fo} style={{marginBottom:20}}>
               <div style={{fontSize:10,color:'#5A4A3A',textTransform:'uppercase',letterSpacing:1,marginBottom:10,fontWeight:800}}>{fo} ФО</div>
@@ -252,7 +272,6 @@ export default function Wildberries(){
         </div>
       )}
 
-      {/* ЗАКАЗЫ */}
       {activeTab==='orders'&&(
         <div>
           <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',padding:'16px 18px',marginBottom:16}}>
@@ -377,7 +396,6 @@ export default function Wildberries(){
         </div>
       )}
 
-      {/* ОТГРУЗКИ */}
       {activeTab==='shipments'&&(
         <div>
           <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',padding:'16px 18px',marginBottom:12}}>
@@ -491,36 +509,34 @@ export default function Wildberries(){
         </div>
       )}
 
-      {/* ОБНОВИТЬ ОСТАТКИ */}
       {activeTab==='update'&&(
-        <div style={{maxWidth:480}}>
-          <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',padding:'16px 18px'}}>
-            <div style={{fontSize:14,fontWeight:800,color:'#1C2E26',marginBottom:8}}>Обновить остатки на складах WB</div>
-            <div style={{fontSize:12,color:'#7A6A5A',marginBottom:16,padding:'8px 12px',background:'#F5F0E8',borderRadius:8}}>
-              Пока API не подключён — вводите вручную.
+        <div style={{maxWidth:520}}>
+          <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',padding:'20px 22px'}}>
+            <div style={{fontSize:14,fontWeight:800,color:'#1C2E26',marginBottom:8}}>Обновить данные с WB</div>
+            <div style={{fontSize:12,color:'#7A6A5A',marginBottom:20,padding:'10px 12px',background:'#F5F0E8',borderRadius:8,lineHeight:1.6}}>
+              Запускает скрипт обновления через GitHub Actions:<br/>
+              • Остатки на всех складах WB<br/>
+              • Темп продаж по складам за 14 дней<br/>
+              • Заказы за последние 7 дней<br/>
+              Занимает ~1-2 минуты.
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:12}}>
-              <div>
-                <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>Склад WB</div>
-                <select style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13}}>
-                  {WHS.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>Артикул (цвет)</div>
-                <select style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13}}>
-                  {PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-              <div>
-                <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>Остаток (шт)</div>
-                <input type="number" placeholder="0"
-                  style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13}}/>
-              </div>
-            </div>
-            <button style={{padding:'8px 20px',background:'#1C2E26',color:'#C4A882',border:'none',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer'}}>
-              Обновить остаток
+            <button onClick={runUpdate} disabled={updating} style={{
+              padding:'10px 24px',background:updating?'#7A8A7A':'#1C2E26',
+              color:'#C4A882',border:'none',borderRadius:8,fontSize:14,fontWeight:700,
+              cursor:updating?'not-allowed':'pointer',marginBottom:12
+            }}>
+              {updating ? '⏳ Запускаем...' : '🔄 Обновить данные WB'}
             </button>
+            {updateFb&&(
+              <div style={{fontSize:12,padding:'8px 12px',borderRadius:8,
+                background:updateFb.startsWith('✓')?'#D8EED8':'#EED4DD',
+                color:updateFb.startsWith('✓')?'#1A4A28':'#6A1030',fontWeight:600}}>
+                {updateFb}
+              </div>
+            )}
+            <div style={{marginTop:16,fontSize:11,color:'#9A8878'}}>
+              Автообновление: каждый день в 7:00 МСК
+            </div>
           </div>
         </div>
       )}
