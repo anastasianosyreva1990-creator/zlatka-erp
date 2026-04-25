@@ -22,6 +22,7 @@ const SDEK_RATES = {
   'Новосемейкино':1249,'Сарапул':1459
 }
 const BUYOUT = 0.47
+const COLORS = ['Красный','Белый','Черный','Цветной']
 
 export default function Finance() {
   const [tab, setTab] = useState('unit')
@@ -31,6 +32,7 @@ export default function Finance() {
   const [shipments, setShipments] = useState([])
   const [wbStocks, setWbStocks] = useState([])
   const [dbPayouts, setDbPayouts] = useState([])
+  const [readyStock, setReadyStock] = useState([])
   const [selMonth, setSelMonth] = useState('2026-04')
   const [loading, setLoading] = useState(true)
 
@@ -38,13 +40,14 @@ export default function Finance() {
 
   async function loadAll() {
     setLoading(true)
-    const [{ data: wb }, { data: pr }, { data: sw }, { data: sh }, { data: st }, { data: py }] = await Promise.all([
+    const [{ data: wb }, { data: pr }, { data: sw }, { data: sh }, { data: st }, { data: py }, { data: rs }] = await Promise.all([
       supabase.from('wb_monthly').select('*').order('month'),
       supabase.from('productions').select('*, sewers(name, tariff)'),
       supabase.from('sewers').select('*'),
       supabase.from('shipments').select('*').order('ship_date'),
       supabase.from('wb_stocks').select('*'),
       supabase.from('wb_payouts').select('*').order('payout_date'),
+      supabase.from('ready_stock').select('*'),
     ])
     setWbData(wb || [])
     setProductions(pr || [])
@@ -52,6 +55,7 @@ export default function Finance() {
     setShipments(sh || [])
     setWbStocks(st || [])
     setDbPayouts(py || [])
+    setReadyStock(rs || [])
     setLoading(false)
   }
 
@@ -96,11 +100,65 @@ export default function Finance() {
     return { sold, avgRevenue, logSalePerUnit, logCancelPerUnit, mat, sdek, tariff, nalog, profitPerUnit, totalProfit: profitPerUnit * sold }
   }
 
+  // Средневзвешенная себестоимость по цвету
+  function calcCostPerUnit(color) {
+    const prod = COLOR_PROD[color]
+    const mat = MAT[prod] || 63
+    const tariff = calcTariffPerUnit(selMonth, prod)
+    return mat + tariff
+  }
+
+  // Заморозка
+  function calcFreeze() {
+    const result = {
+      myWarehouse: {},
+      inTransit: {},
+      onWb: {},
+      inWayToClient: {},
+    }
+    COLORS.forEach(c => {
+      result.myWarehouse[c] = 0
+      result.inTransit[c] = 0
+      result.onWb[c] = 0
+      result.inWayToClient[c] = 0
+    })
+
+    // 1. Мой склад (ready_stock)
+    COLORS.forEach(c => {
+      const prod = COLOR_PROD[c]
+      const qty = readyStock.find(r => r.product === prod)?.quantity || 0
+      result.myWarehouse[c] = qty * calcCostPerUnit(c)
+    })
+
+    // 2. В пути до WB (отгрузки со статусом "В пути")
+    const inTransitShipments = shipments.filter(s => s.status === 'В пути')
+    inTransitShipments.forEach(s => {
+      const color = Object.entries(COLOR_PROD).find(([,p]) => p === s.product)?.[0]
+      if (color) {
+        result.inTransit[color] = (result.inTransit[color] || 0) + s.quantity * calcCostPerUnit(color)
+      }
+    })
+
+    // 3. На складе WB
+    COLORS.forEach(c => {
+      const prod = COLOR_PROD[c]
+      const totalQty = wbStocks.filter(s => s.product === prod).reduce((a, s) => a + s.quantity, 0)
+      result.onWb[c] = totalQty * calcCostPerUnit(c)
+    })
+
+    // 4. В пути к клиенту (inWayToClient)
+    COLORS.forEach(c => {
+      const prod = COLOR_PROD[c]
+      const totalInWay = wbStocks.filter(s => s.product === prod).reduce((a, s) => a + (s.in_way_to_client || 0), 0)
+      result.inWayToClient[c] = totalInWay * calcCostPerUnit(c)
+    })
+
+    return result
+  }
+
   function buildPayouts() {
     const today = new Date()
     const result = []
-
-    // ФАКТ — группируем по дате выплаты и суммируем
     const grouped = {}
     dbPayouts.forEach(p => {
       const d = p.payout_date
@@ -110,40 +168,23 @@ export default function Finance() {
     })
     Object.entries(grouped).forEach(([date, data]) => {
       if (data.amount <= 0) return
-      result.push({
-        date: new Date(date),
-        amount: Math.round(data.amount),
-        type: 'fact',
-        period: data.periods.join(', ')
-      })
+      result.push({ date: new Date(date), amount: Math.round(data.amount), type: 'fact', period: data.periods.join(', ') })
     })
-
-    // РАСЧЁТ — прогноз на 2 месяца вперёд по неделям
     const lastWb = wbData[wbData.length - 1] || {}
     const lastSold = (lastWb.sold_red||0)+(lastWb.sold_white||0)+(lastWb.sold_black||0)+(lastWb.sold_color||0)
     const lastNet = (lastWb.revenue||0) - (lastWb.log_sale||0) - (lastWb.log_cancel||0)
     const avgNetPerUnit = lastSold > 0 ? lastNet / lastSold : 400
-    const avgDailySales = 25
-    const weeklyNet = Math.round(avgDailySales * 7 * avgNetPerUnit)
-
-    // Ближайший понедельник + 35 дней
+    const weeklyNet = Math.round(25 * 7 * avgNetPerUnit)
     let d = new Date(today)
     const dow = d.getDay()
     d.setDate(d.getDate() + (dow === 1 ? 7 : (8 - dow) % 7))
     d.setDate(d.getDate() + 35)
-
     for (let i = 0; i < 8; i++) {
       const date = new Date(d)
       date.setDate(date.getDate() + i * 7)
       if (date > new Date(today.getTime() + 65 * 24 * 60 * 60 * 1000)) break
-      result.push({
-        date,
-        amount: weeklyNet,
-        type: 'calc',
-        period: `~${avgDailySales * 7} выкупов × ${fmt(Math.round(avgNetPerUnit))} ₽/шт`
-      })
+      result.push({ date, amount: weeklyNet, type: 'calc', period: `~${25 * 7} выкупов × ${fmt(Math.round(avgNetPerUnit))} ₽/шт` })
     }
-
     return result.sort((a, b) => a.date - b.date)
   }
 
@@ -151,14 +192,27 @@ export default function Finance() {
 
   const wb = wbData.find(d => d.month === selMonth) || {}
   const totalSold = (wb.sold_red||0)+(wb.sold_white||0)+(wb.sold_black||0)+(wb.sold_color||0)
-  const monthProfit = ['Красный','Белый','Черный','Цветной'].map(c => calcUnit(selMonth, c)).reduce((a, u) => a + u.totalProfit, 0)
-  const wbStockProfit = wbStocks.reduce((a, s) => {
-    const color = s.product?.replace('Кокошник ', '')
-    if (!color || !COLOR_DOT[color]) return a
-    const u = calcUnit(selMonth, color)
-    return a + s.quantity * BUYOUT * u.profitPerUnit
-  }, 0)
+  const monthProfit = COLORS.map(c => calcUnit(selMonth, c)).reduce((a, u) => a + u.totalProfit, 0)
   const payouts = buildPayouts()
+
+  const freeze = calcFreeze()
+  const freezeTotal = {
+    myWarehouse: Object.values(freeze.myWarehouse).reduce((a,b)=>a+b,0),
+    inTransit: Object.values(freeze.inTransit).reduce((a,b)=>a+b,0),
+    onWb: Object.values(freeze.onWb).reduce((a,b)=>a+b,0),
+    inWayToClient: Object.values(freeze.inWayToClient).reduce((a,b)=>a+b,0),
+  }
+  const grandTotal = Object.values(freezeTotal).reduce((a,b)=>a+b,0)
+
+  // Прогноз прибыли если продать всё
+  const totalWbQty = COLORS.reduce((a, c) => {
+    const prod = COLOR_PROD[c]
+    return a + wbStocks.filter(s => s.product === prod).reduce((s2, s) => s2 + s.quantity + (s.in_way_to_client||0), 0)
+  }, 0)
+  const avgProfitPerUnit = COLORS.map(c => calcUnit(selMonth, c))
+    .filter(u => u.sold > 0)
+    .reduce((a, u, _, arr) => a + u.profitPerUnit / arr.length, 0)
+  const expectedProfit = Math.round(totalWbQty * BUYOUT * avgProfitPerUnit)
 
   const TabBtn = ({ id, label }) => (
     <button onClick={() => setTab(id)} style={{
@@ -186,13 +240,15 @@ export default function Finance() {
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
         <TabBtn id="unit" label="Юнит-экономика"/>
+        <TabBtn id="freeze" label="Заморозка"/>
         <TabBtn id="payout" label="Выплаты WB"/>
         <TabBtn id="salary" label="Зарплаты"/>
         <TabBtn id="history" label="История"/>
       </div>
 
+      {/* ЮНИТ-ЭКОНОМИКА */}
       {tab === 'unit' && (
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
@@ -209,7 +265,7 @@ export default function Finance() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12, marginBottom: 20 }}>
-            {['Красный','Белый','Черный','Цветной'].map(color => {
+            {COLORS.map(color => {
               const u = calcUnit(selMonth, color)
               if (u.sold === 0 && u.avgRevenue === 0) return null
               return (
@@ -252,13 +308,12 @@ export default function Finance() {
             })}
           </div>
 
+          {/* Прогноз с остатков */}
           <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', padding: '16px 18px' }}>
-            <div style={{ fontWeight: 800, fontSize: 14, color: '#1C2E26', marginBottom: 12 }}>
-              Прогноз прибыли с текущих остатков на WB
-            </div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: '#1C2E26', marginBottom: 12 }}>Прогноз прибыли с текущих остатков на WB</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, marginBottom: 12 }}>
-              {['Красный','Белый','Черный','Цветной'].map(color => {
-                const prod = 'Кокошник ' + color
+              {COLORS.map(color => {
+                const prod = COLOR_PROD[color]
                 const totalStock = wbStocks.filter(s => s.product === prod).reduce((a, s) => a + s.quantity, 0)
                 const u = calcUnit(selMonth, color)
                 const expected = Math.round(totalStock * BUYOUT * u.profitPerUnit)
@@ -278,16 +333,127 @@ export default function Finance() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#1C2E26', borderRadius: 8 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: '#F2EBE0' }}>Итого ожидаемая прибыль</span>
-              <span style={{ fontSize: 16, fontWeight: 800, color: '#C4A882' }}>{wbStockProfit >= 0 ? '+' : ''}{fmt(wbStockProfit)} ₽</span>
+              <span style={{ fontSize: 16, fontWeight: 800, color: '#C4A882' }}>
+                {fmt(COLORS.map(c => { const prod = COLOR_PROD[c]; const qty = wbStocks.filter(s=>s.product===prod).reduce((a,s)=>a+s.quantity,0); return Math.round(qty*BUYOUT*calcUnit(selMonth,c).profitPerUnit) }).reduce((a,b)=>a+b,0))} ₽
+              </span>
             </div>
           </div>
         </div>
       )}
 
+      {/* ЗАМОРОЗКА */}
+      {tab === 'freeze' && (
+        <div>
+          <div style={{ fontSize: 12, color: '#6A4A10', background: '#EEE4C8', padding: '10px 14px', borderRadius: 10, marginBottom: 16 }}>
+            ⓘ Заморозка = деньги вложенные в товар (материалы + зарплата) которые ещё не вернулись через продажи.
+          </div>
+
+          {/* Карточки по категориям */}
+          {[
+            { key: 'myWarehouse', label: '🏠 На моём складе', sub: 'Готовые изделия ждут отгрузки' },
+            { key: 'inTransit', label: '🚚 В пути до WB', sub: 'Отгрузки со статусом "В пути"' },
+            { key: 'onWb', label: '📦 На складе WB', sub: 'Товар принят складом WB' },
+            { key: 'inWayToClient', label: '📫 В пути к клиенту', sub: 'Заказы в доставке' },
+          ].map(cat => {
+            const catTotal = Object.values(freeze[cat.key]).reduce((a,b)=>a+b,0)
+            return (
+              <div key={cat.key} style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', padding: '14px 18px', marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#1C2E26' }}>{cat.label}</div>
+                    <div style={{ fontSize: 11, color: '#7A6A5A', marginTop: 2 }}>{cat.sub}</div>
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#6A304A' }}>{fmt(catTotal)} ₽</div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+                  {COLORS.map(c => (
+                    <div key={c} style={{ background: '#F5F0E8', borderRadius: 8, padding: '8px 10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: COLOR_DOT[c] }}></span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#1C2E26' }}>{c}</span>
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#6A304A' }}>{fmt(freeze[cat.key][c])} ₽</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Итого заморожено */}
+          <div style={{ background: '#1C2E26', borderRadius: 12, padding: '16px 20px', marginBottom: 16 }}>
+            <div style={{ fontSize: 11, color: 'rgba(196,168,130,0.7)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
+              Итого заморожено в бизнесе
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 14 }}>
+              {[
+                { label: 'Мой склад', value: freezeTotal.myWarehouse },
+                { label: 'В пути до WB', value: freezeTotal.inTransit },
+                { label: 'На складе WB', value: freezeTotal.onWb },
+                { label: 'К клиенту', value: freezeTotal.inWayToClient },
+              ].map((item, i) => (
+                <div key={i} style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '10px 12px' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(196,168,130,0.6)', fontWeight: 700, marginBottom: 4 }}>{item.label}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#C4A882' }}>{fmt(item.value)} ₽</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: '1px solid rgba(196,168,130,0.2)' }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#F2EBE0' }}>Всего заморожено</span>
+              <span style={{ fontSize: 24, fontWeight: 800, color: '#C4A882' }}>{fmt(grandTotal)} ₽</span>
+            </div>
+          </div>
+
+          {/* Прогноз если продать всё */}
+          <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', padding: '16px 18px' }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#1C2E26', marginBottom: 4 }}>
+              Прогноз: если продать всё что на WB
+            </div>
+            <div style={{ fontSize: 12, color: '#7A6A5A', marginBottom: 16 }}>
+              Остатки на складах + в пути к клиенту × {Math.round(BUYOUT*100)}% выкуп × прибыль/шт
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 10, marginBottom: 14 }}>
+              {COLORS.map(color => {
+                const prod = COLOR_PROD[color]
+                const onWb = wbStocks.filter(s => s.product === prod).reduce((a, s) => a + s.quantity, 0)
+                const inWay = wbStocks.filter(s => s.product === prod).reduce((a, s) => a + (s.in_way_to_client||0), 0)
+                const total = onWb + inWay
+                const u = calcUnit(selMonth, color)
+                const profitWithBuyout = Math.round(u.profitPerUnit * BUYOUT)
+                const expected = Math.round(total * BUYOUT * u.profitPerUnit)
+                return (
+                  <div key={color} style={{ background: '#F5F0E8', borderRadius: 8, padding: '10px 12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR_DOT[color] }}></span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#1C2E26' }}>{color}</span>
+                    </div>
+                    <div style={{ fontSize: 10, color: '#7A6A5A', marginBottom: 2 }}>{total} шт × {Math.round(BUYOUT*100)}%</div>
+                    <div style={{ fontSize: 10, color: '#7A6A5A', marginBottom: 4 }}>прибыль/шт с выкупом: {fmt(profitWithBuyout)} ₽</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: expected >= 0 ? '#1A6B28' : '#6A304A' }}>
+                      {expected >= 0 ? '+' : ''}{fmt(expected)} ₽
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 14px', background: '#1C2E26', borderRadius: 8 }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'rgba(196,168,130,0.7)', fontWeight: 700, marginBottom: 2 }}>Ожидаемая чистая прибыль</div>
+                <div style={{ fontSize: 11, color: 'rgba(196,168,130,0.5)' }}>если всё продастся с учётом выкупа {Math.round(BUYOUT*100)}%</div>
+              </div>
+              <span style={{ fontSize: 22, fontWeight: 800, color: '#C4A882', alignSelf: 'center' }}>
+                +{fmt(expectedProfit)} ₽
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ВЫПЛАТЫ WB */}
       {tab === 'payout' && (
         <div>
           <div style={{ background: '#EEE4C8', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 12, color: '#6A4A10', fontWeight: 600 }}>
-            💡 Факт — из еженедельных отчётов WB (выручка − логистика). Расчёт — прогноз на 2 месяца по среднему темпу продаж. Деньги приходят каждый понедельник.
+            💡 Факт — из еженедельных отчётов WB (выручка − логистика). Расчёт — прогноз по среднему темпу продаж.
           </div>
           <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'hidden' }}>
             <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(196,168,130,0.2)', fontWeight: 700, fontSize: 14, color: '#1C2E26' }}>
@@ -321,6 +487,7 @@ export default function Finance() {
         </div>
       )}
 
+      {/* ЗАРПЛАТЫ */}
       {tab === 'salary' && (
         <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'hidden' }}>
           <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(196,168,130,0.2)', fontWeight: 700, fontSize: 14, color: '#1C2E26' }}>
@@ -353,6 +520,7 @@ export default function Finance() {
         </div>
       )}
 
+      {/* ИСТОРИЯ */}
       {tab === 'history' && (
         <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'auto' }}>
           <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(196,168,130,0.2)', fontWeight: 700, fontSize: 14, color: '#1C2E26' }}>
