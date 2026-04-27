@@ -66,6 +66,8 @@ export default function Settings() {
   const [updatingTariffs, setUpdatingTariffs] = useState(false)
   const [editTariffId, setEditTariffId] = useState(null)
   const [editTariffVal, setEditTariffVal] = useState('')
+  const [editSdekId, setEditSdekId] = useState(null)
+  const [editSdekVal, setEditSdekVal] = useState('')
 
   // --- Артикулы ---
   const [products, setProducts] = useState([])
@@ -213,6 +215,13 @@ export default function Settings() {
     const tariff = parseInt(val) || 0
     await supabase.from('wb_warehouses').update({ wb_tariff: tariff }).eq('id', whId)
     setEditTariffId(null)
+    loadWarehouses()
+  }
+
+  async function saveSdek(whId, val) {
+    const tariff = parseInt(val) || 0
+    await supabase.from('wb_warehouses').update({ sdek_tariff: tariff }).eq('id', whId)
+    setEditSdekId(null)
     loadWarehouses()
   }
 
@@ -367,7 +376,7 @@ export default function Settings() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
-                  {['Склад WB','ФО','Доставка до клиента, ₽/шт','СДЭК, ₽/партию','Статус',''].map(h => (
+                  {['Склад WB','ФО','Доставка до клиента, ₽/шт','СДЭК, ₽/партию','СДЭК/шт','Статус',''].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: h.includes('₽') ? 'right' : 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -387,6 +396,9 @@ export default function Settings() {
                       </td>
                       <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
                         <input type="number" value={editWhFields.sdek_tariff??''} onChange={e=>setEditWhFields({...editWhFields,sdek_tariff:e.target.value})} style={{...inp,width:80,textAlign:'right'}}/>
+                      </td>
+                      <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color:'#9A8878', textAlign:'right', fontSize:12 }}>
+                        {editWhFields.sdek_tariff ? Math.round(parseInt(editWhFields.sdek_tariff) / 96) + ' ₽' : '—'}
                       </td>
                       <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}></td>
                       <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
@@ -417,7 +429,28 @@ export default function Settings() {
                           </span>
                         )}
                       </td>
-                      <td style={{ padding:'10px 14px', textAlign:'right', fontWeight:700, borderBottom:'0.5px solid rgba(74,111,82,0.07)' }}>{fmt(wh.sdek_tariff ?? 0)} ₽</td>
+                      <td style={{ padding:'6px 14px', textAlign:'right', borderBottom:'0.5px solid rgba(74,111,82,0.07)' }}>
+                        {editSdekId === wh.id ? (
+                          <input
+                            type="number" autoFocus
+                            value={editSdekVal}
+                            onChange={e => setEditSdekVal(e.target.value)}
+                            onBlur={() => saveSdek(wh.id, editSdekVal)}
+                            onKeyDown={e => { if (e.key === 'Enter') saveSdek(wh.id, editSdekVal); if (e.key === 'Escape') setEditSdekId(null) }}
+                            style={{ width: 80, padding: '4px 8px', border: '1px solid #1C2E26', borderRadius: 6, fontSize: 13, textAlign: 'right', fontWeight: 700 }}
+                          />
+                        ) : (
+                          <span
+                            onClick={() => { setEditSdekId(wh.id); setEditSdekVal(String(wh.sdek_tariff ?? 0)) }}
+                            title="Нажмите чтобы изменить"
+                            style={{ fontWeight: 700, cursor: 'text', borderBottom: '1px dashed rgba(74,111,82,0.3)', paddingBottom: 1 }}>
+                            {fmt(wh.sdek_tariff ?? 0)} ₽
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding:'10px 14px', textAlign:'right', color:'#7A6A5A', fontWeight:600, borderBottom:'0.5px solid rgba(74,111,82,0.07)', fontSize:12 }}>
+                        {wh.sdek_tariff ? Math.round(wh.sdek_tariff / 96) + ' ₽' : '—'}
+                      </td>
                       <td style={{ padding:'10px 14px', borderBottom:'0.5px solid rgba(74,111,82,0.07)' }}>
                         <span style={{ fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:700,
                           background: wh.active!==false ? '#D8EED8' : '#EEE4C8',

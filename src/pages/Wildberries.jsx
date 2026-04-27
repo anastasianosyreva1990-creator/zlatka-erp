@@ -27,7 +27,7 @@ const MONTH_NAMES = {
 function logCost(wh){return wh.tariff||0}
 
 export default function Wildberries(){
-  const [warehouses,setWarehouses]=useState(WHS)
+  const [warehouses,setWarehouses]=useState([])
   const [wbStocks,setWbStocks]=useState([])
   const [wbSales,setWbSales]=useState([])
   const [wbMonthly,setWbMonthly]=useState([])

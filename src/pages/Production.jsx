@@ -342,13 +342,10 @@ export default function Production() {
       {/* ПОПАП ВЕЗТИ */}
       {popup?.type === 'vezti' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setPopup(null)}>
-          <div style={{ background: '#fff', borderRadius: 16, width: 360, padding: '24px' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>Везти — {popup.sewer.name}</span>
-              <button onClick={() => setPopup(null)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
-            </div>
-            <div style={{ fontSize: 12, color: '#6A4A10', background: '#EEE4C8', padding: '8px 12px', borderRadius: 8, marginBottom: 16 }}>
-              ⓘ На 1 неделю ({popup.sewer.weekly_capacity} шт/нед). Показаны только материалы, которых не хватает.
+          <div style={{ background: '#fff', borderRadius: 16, width: 320, padding: '20px 24px' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <span style={{ fontSize: 11, color: '#7A6A5A', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Везти — на неделю ({popup.sewer.weekly_capacity} шт)</span>
+              <button onClick={() => setPopup(null)} style={{ fontSize: 18, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A', lineHeight: 1 }}>×</button>
             </div>
             {(() => {
               const toBring = getSewerStocks(popup.sewer.id)
@@ -362,17 +359,17 @@ export default function Production() {
                 })
                 .filter(x => x.bring > 0)
               if (toBring.length === 0) return (
-                <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 14, fontWeight: 700, color: '#1A6B28' }}>✓ Всего достаточно на эту неделю</div>
+                <div style={{ textAlign: 'center', padding: '20px 0', fontSize: 14, fontWeight: 700, color: '#1A6B28' }}>✓ Всего достаточно на неделю</div>
               )
               return (
-                <div>
+                <>
                   {toBring.map((x, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '0.5px solid rgba(74,111,82,0.1)', fontSize: 13 }}>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '0.5px solid rgba(74,111,82,0.1)', fontSize: 13 }}>
                       <span style={{ fontWeight: 700, color: '#1C2E26' }}>{x.matName}</span>
-                      <span style={{ fontWeight: 800, color: '#6A1030', background: '#EED4DD', padding: '2px 8px', borderRadius: 6, fontSize: 12 }}>+{fmt(x.bring)} {x.unit}</span>
+                      <span style={{ fontWeight: 800, color: '#6A1030', background: '#EED4DD', padding: '3px 10px', borderRadius: 6, fontSize: 13 }}>+{fmt(x.bring)} {x.unit}</span>
                     </div>
                   ))}
-                </div>
+                </>
               )
             })()}
           </div>
