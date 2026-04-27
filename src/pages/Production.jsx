@@ -277,12 +277,12 @@ export default function Production() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 600 }}>
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
-                <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>Материал</th>
-                <th style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>На складе</th>
+                <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Материал</th>
+                <th style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>На складе</th>
                 {sewers.map(sw => (
-                  <th key={sw.id} style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>{sw.name}</th>
+                  <th key={sw.id} style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{sw.name}</th>
                 ))}
-                <th style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>Итого</th>
+                <th style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Итого</th>
               </tr>
             </thead>
             <tbody>
@@ -293,12 +293,12 @@ export default function Production() {
                 const total = whQty + sewerQtys.reduce((a, b) => a + b, 0)
                 return (
                   <tr key={mat.id}>
-                    <td style={{ padding: '10px 14px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{mat.name}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(whQty)} {mat.unit}</td>
+                    <td style={{ padding: '10px 14px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{mat.name}</td>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(whQty)} {mat.unit}</td>
                     {sewerQtys.map((qty, i) => (
-                      <td key={i} style={{ padding: '10px 14px', textAlign: 'right', color: '#5A4A3A', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(qty)} {mat.unit}</td>
+                      <td key={i} style={{ padding: '10px 14px', textAlign: 'right', color: '#5A4A3A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(qty)} {mat.unit}</td>
                     ))}
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, color: '#1A6B28', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(total)} {mat.unit}</td>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, color: '#1A6B28', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(total)} {mat.unit}</td>
                   </tr>
                 )
               })}

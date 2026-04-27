@@ -250,9 +250,9 @@ export default function Purchases() {
                   {[
                     {l:'Дата', tight:true}, {l:'Материал'}, {l:'Кол-во', tight:true, right:true},
                     {l:'Сумма', tight:true, right:true}, {l:'Цена/ед', tight:true, right:true},
-                    {l:'Поставщик'}, {l:'Статус', tight:true}, {l:'', tight:true},
+                    {l:'Поставщик'}, {l:'Статус'}, {l:'', tight:true},
                   ].map(h => (
-                    <th key={h.l} style={{ padding:'8px 10px', textAlign:h.right?'right':'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:'1%' }}>{h.l}</th>
+                    <th key={h.l} style={{ padding:'8px 10px', textAlign:h.right?'right':'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:h.tight?'1%':'auto' }}>{h.l}</th>
                   ))}
                 </tr>
               </thead>
@@ -267,11 +267,11 @@ export default function Purchases() {
                       <td style={{ padding: '7px 10px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{p.materials?.name}</td>
                       <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontWeight: 700, whiteSpace: 'nowrap' }}>{fmt(p.quantity)} {p.materials?.unit}</td>
                       <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontWeight: 800, color: '#1C2E26', whiteSpace: 'nowrap' }}>{fmt(p.total_sum)} ₽</td>
-                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A', whiteSpace: 'nowrap' }}>{fmtD(p.price_per_unit)} ₽/{p.materials?.unit}</td>
+                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A', whiteSpace: 'nowrap' }}>{fmtD(p.price_per_unit)} ₽</td>
                       <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A', whiteSpace: 'nowrap' }}>{p.supplier || '—'}</td>
-                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', minWidth: 110 }}>
                         <select value={p.status} onChange={e => setStatus(p.id, e.target.value)}
-                          style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, border: `1px solid ${st.color}`, background: st.bg, cursor: 'pointer', fontWeight: 700, color: st.color }}>
+                          style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: `1px solid ${st.color}`, background: st.bg, cursor: 'pointer', fontWeight: 700, color: st.color, width: '100%' }}>
                           <option value="ordered">Заказано</option>
                           <option value="transit">В пути</option>
                           <option value="delivered">Получено</option>

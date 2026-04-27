@@ -73,8 +73,8 @@ export default function Wildberries(){
       ])
       if(!salesRes.ok||!ordersRes.ok) return
       const [salesData,ordersData]=await Promise.all([salesRes.json(),ordersRes.json()])
-      const buyouts=(salesData||[]).filter(s=>s.saleID?.startsWith('S')).length
-      const totalOrders=(ordersData||[]).length
+      const buyouts=(salesData||[]).filter(s=>s.saleID?.startsWith('S')&&s.brandName==='Златка').length
+      const totalOrders=(ordersData||[]).filter(o=>o.brandName==='Златка').length
       if(totalOrders>0) setBuyoutRate(Math.round(buyouts/totalOrders*100))
     }catch(e){
       console.error('WB buyout rate:',e)

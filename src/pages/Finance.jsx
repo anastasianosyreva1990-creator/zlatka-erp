@@ -39,8 +39,25 @@ export default function Finance() {
   const [orders, setOrders] = useState([])
   const [selMonth, setSelMonth] = useState('2026-04')
   const [loading, setLoading] = useState(true)
+  const [buyoutRateWB, setBuyoutRateWB] = useState(null)
 
-  useEffect(() => { loadAll() }, [])
+  useEffect(() => { loadAll(); fetchWBBuyoutRate() }, [])
+
+  async function fetchWBBuyoutRate() {
+    const token = import.meta.env.VITE_WB_TOKEN
+    const dateFrom = new Date(Date.now() - 30*24*60*60*1000).toISOString().replace(/\.\d{3}Z$/, '')
+    try {
+      const [salesRes, ordersRes] = await Promise.all([
+        fetch(`https://statistics-api.wildberries.ru/api/v1/supplier/sales?dateFrom=${dateFrom}`, { headers: { 'Authorization': token } }),
+        fetch(`https://statistics-api.wildberries.ru/api/v1/supplier/orders?dateFrom=${dateFrom}`, { headers: { 'Authorization': token } }),
+      ])
+      if (!salesRes.ok || !ordersRes.ok) return
+      const [salesData, ordersData] = await Promise.all([salesRes.json(), ordersRes.json()])
+      const buyouts = (salesData || []).filter(s => s.saleID?.startsWith('S') && s.brandName === 'Златка').length
+      const totalOrders = (ordersData || []).filter(o => o.brandName === 'Златка').length
+      if (totalOrders > 0) setBuyoutRateWB(buyouts / totalOrders)
+    } catch (e) {}
+  }
 
   async function loadAll() {
     setLoading(true)
@@ -222,7 +239,7 @@ export default function Finance() {
 
   if (loading) return <div style={{ padding: 40, color: '#5A4A3A' }}>Загрузка...</div>
 
-  const BUYOUT = calcBuyoutRate(selMonth)
+  const BUYOUT = buyoutRateWB ?? calcBuyoutRate(selMonth)
   const wb = wbData.find(d => d.month === selMonth) || {}
   const totalSold = (wb.sold_red||0)+(wb.sold_white||0)+(wb.sold_black||0)+(wb.sold_color||0)
   const monthOrders = orders.filter(o => o.date?.startsWith(selMonth)).reduce((a, o) => a + o.red + o.white + o.black + o.color, 0)
@@ -532,7 +549,7 @@ export default function Finance() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
-                {['Швея','Тариф','Сдано','Начислено','Выручка WB','Чистая прибыль'].map(h => (
+                {['Швея','Тариф','Сдано','Начислено'].map(h => (
                   <th key={h} style={{ padding: '9px 12px', textAlign: h === 'Швея' ? 'left' : 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -542,17 +559,12 @@ export default function Finance() {
                 const prods = productions.filter(p => p.date?.startsWith(selMonth) && p.sewer_id === sw.id)
                 const qty = prods.reduce((a, p) => a + p.quantity, 0)
                 const earned = qty * sw.tariff
-                const { revenue, netProfit } = calcSewerProfit(sw)
                 return (
                   <tr key={sw.id}>
                     <td style={{ padding: '9px 12px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{sw.name}</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{sw.tariff} ₽/шт</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(qty)} шт</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(earned)} ₽</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#1A6B28', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{revenue > 0 ? fmt(revenue) + ' ₽' : '—'}</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: netProfit >= 0 ? '#1A6B28' : '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
-                      {revenue > 0 ? (netProfit >= 0 ? '+' : '') + fmt(netProfit) + ' ₽' : '—'}
-                    </td>
                   </tr>
                 )
               })}
@@ -562,19 +574,12 @@ export default function Finance() {
                   const qty = productions.filter(p => p.date?.startsWith(selMonth) && p.sewer_id === sw.id).reduce((s, p) => s + p.quantity, 0)
                   return a + qty * sw.tariff
                 }, 0)
-                const profits = sewers.map(sw => calcSewerProfit(sw))
-                const totRevenue = profits.reduce((a, p) => a + p.revenue, 0)
-                const totNetProfit = profits.reduce((a, p) => a + p.netProfit, 0)
                 return (
                   <tr style={{ background: '#F5F0E8', fontWeight: 800 }}>
                     <td style={{ padding: '9px 12px', fontWeight: 800, color: '#1C2E26', borderTop: '1px solid rgba(196,168,130,0.2)' }}>Итого</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', borderTop: '1px solid rgba(196,168,130,0.2)', color: '#7A6A5A' }}>—</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, borderTop: '1px solid rgba(196,168,130,0.2)' }}>{fmt(totQty)} шт</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: '#6A304A', borderTop: '1px solid rgba(196,168,130,0.2)' }}>{fmt(totEarned)} ₽</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: '#1A6B28', borderTop: '1px solid rgba(196,168,130,0.2)' }}>{totRevenue > 0 ? fmt(totRevenue) + ' ₽' : '—'}</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: totNetProfit >= 0 ? '#1A6B28' : '#6A304A', borderTop: '1px solid rgba(196,168,130,0.2)' }}>
-                      {totRevenue > 0 ? (totNetProfit >= 0 ? '+' : '') + fmt(totNetProfit) + ' ₽' : '—'}
-                    </td>
                   </tr>
                 )
               })()}
