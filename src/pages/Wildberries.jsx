@@ -56,8 +56,30 @@ export default function Wildberries(){
   const [selMonth,setSelMonth]=useState('2026-04')
   const [updateFb,setUpdateFb]=useState('')
   const [updating,setUpdating]=useState(false)
+  const [buyoutRate,setBuyoutRate]=useState(null)
+  const [buyoutLoading,setBuyoutLoading]=useState(false)
 
-  useEffect(()=>{loadAll()},[])
+  useEffect(()=>{loadAll();fetchBuyoutRate()},[])
+
+  async function fetchBuyoutRate(){
+    setBuyoutLoading(true)
+    const token=import.meta.env.VITE_WB_TOKEN
+    const dateFrom=new Date(Date.now()-30*24*60*60*1000).toISOString().replace(/\.\d{3}Z$/,'')
+    try{
+      const [salesRes,ordersRes]=await Promise.all([
+        fetch(`https://statistics-api.wildberries.ru/api/v1/supplier/sales?dateFrom=${dateFrom}`,{headers:{'Authorization':token}}),
+        fetch(`https://statistics-api.wildberries.ru/api/v1/supplier/orders?dateFrom=${dateFrom}`,{headers:{'Authorization':token}}),
+      ])
+      if(!salesRes.ok||!ordersRes.ok) return
+      const [salesData,ordersData]=await Promise.all([salesRes.json(),ordersRes.json()])
+      const buyouts=(salesData||[]).filter(s=>s.saleID?.startsWith('S')).length
+      const totalOrders=(ordersData||[]).length
+      if(totalOrders>0) setBuyoutRate(Math.round(buyouts/totalOrders*100))
+    }catch(e){
+      console.error('WB buyout rate:',e)
+    }
+    setBuyoutLoading(false)
+  }
 
   async function loadAll(){
     setLoading(true)
@@ -162,13 +184,6 @@ export default function Wildberries(){
     setEditShip(null);loadAll()
   }
 
-  function calcBuyoutRate(){
-    const totalSold=wbMonthly.reduce((a,d)=>a+(d.sold_red||0)+(d.sold_white||0)+(d.sold_black||0)+(d.sold_color||0),0)
-    const totalOrders=orders.reduce((a,o)=>a+o.red+o.white+o.black+o.color,0)
-    if(totalOrders>0&&totalSold>0) return Math.round(totalSold/totalOrders*100)
-    return 47
-  }
-
   const foGroups={}
   warehouses.forEach(wh=>{if(!foGroups[wh.fo])foGroups[wh.fo]=[];foGroups[wh.fo].push(wh)})
 
@@ -212,7 +227,7 @@ export default function Wildberries(){
           {label:'Заказов в день (апр)',value:fmt(avgPerDay||54),sub:'средний темп'},
           {label:'Складов с дефицитом',value:defCount,color:defCount>0?'#6A1030':'#1A6B28',sub:`из ${warehouses.length} складов`},
           {label:'Индекс локализации',value:'1.40',color:'#6A1030',sub:`покрыто ${coveredCount} из ${warehouses.length} складов`},
-          {label:'Процент выкупа',value:calcBuyoutRate()+'%',sub:'авто · заказы / выкупы WB'},
+          {label:'Процент выкупа',value:buyoutLoading?'…':buyoutRate!==null?buyoutRate+'%':'—',sub:buyoutRate!==null?'выкупы / заказы · 30 дней WB API':'загружается из WB API'},
         ].map((m,i)=>(
           <div key={i} style={{background:'#fff',borderRadius:12,padding:'14px 16px',border:'0.5px solid rgba(74,111,82,0.15)'}}>
             <div style={{fontSize:10,color:'#7A6A5A',fontWeight:700,textTransform:'uppercase',letterSpacing:0.5,marginBottom:4}}>{m.label}</div>
