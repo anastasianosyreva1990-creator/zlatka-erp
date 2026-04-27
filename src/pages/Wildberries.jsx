@@ -254,13 +254,21 @@ export default function Wildberries(){
 
       {activeTab==='signals'&&(
         <div>
-          {warehouses.length > 0 && coveredCount < warehouses.length && (
-            <div style={{background:'#EEE4C8',borderRadius:10,padding:'10px 14px',marginBottom:16,fontSize:12,color:'#6A4A10',fontWeight:600}}>
-              💡 Для индекса локализации 1.0 необходимо покрыть все {warehouses.length} складов.
-              Сейчас с остатками: {coveredCount} из {warehouses.length}.
-              Нужно отгрузить ещё на {warehouses.length - coveredCount} {warehouses.length - coveredCount === 1 ? 'склад' : warehouses.length - coveredCount < 5 ? 'склада' : 'складов'}.
-            </div>
-          )}
+          {warehouses.length > 0 && (() => {
+            const emptyWhs = warehouses.filter(wh => !PRODUCTS.some(prod => getStock(wh.id, prod) > 0))
+            const allCovered = emptyWhs.length === 0
+            return (
+              <div style={{background: allCovered ? '#D8EED8' : '#EEE4C8', borderRadius:10, padding:'10px 14px', marginBottom:16, fontSize:12, color: allCovered ? '#1A4A28' : '#6A4A10', fontWeight:600}}>
+                {allCovered
+                  ? <>✓ Все {warehouses.length} складов покрыты — индекс локализации IL≥1.0 достигнут.</>
+                  : <>
+                      💡 Для IL=1.0 нужно покрыть все {warehouses.length} складов. Сейчас покрыто: {coveredCount} из {warehouses.length}.{' '}
+                      Нужно отгрузить на: <strong>{emptyWhs.map(w => w.name).join(', ')}</strong>.
+                    </>
+                }
+              </div>
+            )
+          })()}
           <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',padding:'14px 18px',marginBottom:16}}>
             <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,textTransform:'uppercase',letterSpacing:0.5,marginBottom:10}}>Итого на всех складах WB</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>

@@ -393,7 +393,7 @@ export default function Finance() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
-                  <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Категория</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>Категория</th>
                   {COLORS.map(c => (
                     <th key={c} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -477,6 +477,9 @@ export default function Finance() {
               <span style={{ fontSize: 22, fontWeight: 800, color: '#C4A882', alignSelf: 'center' }}>
                 +{fmt(expectedProfit)} ₽
               </span>
+            </div>
+            <div style={{ marginTop: 8, fontSize: 11, color: '#9A8878' }}>
+              * Это чистая прибыль с учётом процента выкупа {Math.round(BUYOUT*100)}%. Фактическая прибыль зависит от реального процента выкупа, который меняется каждый месяц.
             </div>
           </div>
         </div>

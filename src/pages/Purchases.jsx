@@ -175,7 +175,7 @@ export default function Purchases() {
                     <thead>
                       <tr style={{ background: '#F5F0E8' }}>
                         {['Материал','На складе','В пути','Расход/день','Дней запаса','','Заказать'].map(h => (
-                          <th key={h} style={{ padding: '8px 12px', textAlign: h === 'Материал' ? 'left' : 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
+                          <th key={h} style={{ padding: '8px 12px', textAlign: h === 'Материал' ? 'left' : 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -191,25 +191,25 @@ export default function Purchases() {
                         else if (days <= 7 && daily > 0) { dayColor = '#6A4A10'; dayBg = '#EEE4C8' }
                         return (
                           <tr key={mat.id}>
-                            <td style={{ padding: '8px 12px', fontWeight: 700, color: '#1C2E26', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{mat.name}</td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontWeight: 700 }}>{fmt(stock)} {mat.unit}</td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: transit > 0 ? '#185FA5' : '#D5CEC5', fontWeight: transit > 0 ? 700 : 400 }}>
+                            <td style={{ padding: '8px 12px', fontWeight: 700, color: '#1C2E26', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{mat.name}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontWeight: 700, whiteSpace: 'nowrap' }}>{fmt(stock)} {mat.unit}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: transit > 0 ? '#185FA5' : '#D5CEC5', fontWeight: transit > 0 ? 700 : 400, whiteSpace: 'nowrap' }}>
                               {transit > 0 ? `${fmt(transit)} ${mat.unit}` : '—'}
                             </td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A' }}>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A', whiteSpace: 'nowrap' }}>
                               {daily > 0 ? `${daily.toFixed(2)} ${mat.unit}` : '—'}
                             </td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
                               <span style={{ fontSize: 12, fontWeight: 800, color: dayColor, background: dayBg, padding: '2px 8px', borderRadius: 6 }}>
                                 {daily <= 0 ? '—' : days > 99 ? '∞' : `${days} дн`}
                               </span>
                             </td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
                               {daily <= 0 ? '' : days <= 3 ? <span style={{ fontSize: 10, fontWeight: 800, color: '#6A1030' }}>🔴 Срочно</span>
                                 : days <= 7 ? <span style={{ fontSize: 10, fontWeight: 800, color: '#6A4A10' }}>🟡 Скоро</span>
                                 : <span style={{ fontSize: 10, fontWeight: 700, color: '#1A6B28' }}>🟢 Норма</span>}
                             </td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
                               {need > 0
                                 ? <span style={{ fontSize: 11, fontWeight: 800, color: days <= 3 ? '#6A1030' : '#6A4A10' }}>+{fmt(need)} {mat.unit}</span>
                                 : <span style={{ fontSize: 11, color: '#D5CEC5' }}>—</span>}
@@ -252,7 +252,7 @@ export default function Purchases() {
                     {l:'Сумма', tight:true, right:true}, {l:'Цена/ед', tight:true, right:true},
                     {l:'Поставщик'}, {l:'Статус', tight:true}, {l:'', tight:true},
                   ].map(h => (
-                    <th key={h.l} style={{ padding:'8px 10px', textAlign:h.right?'right':'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', ...(h.tight?{width:'1%'}:{}) }}>{h.l}</th>
+                    <th key={h.l} style={{ padding:'8px 10px', textAlign:h.right?'right':'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:'1%' }}>{h.l}</th>
                   ))}
                 </tr>
               </thead>

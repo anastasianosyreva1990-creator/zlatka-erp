@@ -455,7 +455,7 @@ export default function Production() {
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
                   {['Дата','Изделие','Кол-во','Начислено'].map(h => (
-                    <th key={h} style={{ padding: '8px 12px', textAlign: h==='Кол-во'||h==='Начислено'?'right':'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>{h}</th>
+                    <th key={h} style={{ padding: '8px 12px', textAlign: h==='Кол-во'||h==='Начислено'?'right':'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', width: '1%', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
