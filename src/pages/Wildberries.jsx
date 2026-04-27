@@ -97,9 +97,13 @@ export default function Wildberries(){
     setLoading(false)
   }
 
-  function getStock(whId,prod){return wbStocks.find(s=>s.warehouse===whId&&s.product===prod)?.quantity||0}
+  function getStock(whId,prod){
+    const whName=warehouses.find(w=>w.id===whId)?.name
+    return wbStocks.find(s=>(s.warehouse===whId||s.warehouse===whName)&&s.product===prod)?.quantity||0
+  }
   function getDailyRate(whId,prod){
-    const found=wbSales.find(s=>s.warehouse===whId&&s.product===prod)
+    const whName=warehouses.find(w=>w.id===whId)?.name
+    const found=wbSales.find(s=>(s.warehouse===whId||s.warehouse===whName)&&s.product===prod)
     return found?.daily_rate??DAILY_FALLBACK[prod]??0
   }
   function daysLeft(whId,prod){const qty=getStock(whId,prod);const spd=getDailyRate(whId,prod)||1;return Math.floor(qty/spd)}
@@ -230,7 +234,7 @@ export default function Wildberries(){
         {[
           {label:'Заказов в день (апр)',value:fmt(avgPerDay||54),sub:'средний темп'},
           {label:'Складов с дефицитом',value:defCount,color:defCount>0?'#6A1030':'#1A6B28',sub:`из ${warehouses.length} складов`},
-          {label:'Индекс локализации',value:'1.40',color:'#6A1030',sub:`покрыто ${coveredCount} из ${warehouses.length} складов`},
+          {label:'Индекс локализации',value:'1.40',color:coveredCount>=warehouses.length?'#1A6B28':'#6A1030',sub:warehouses.length===0?'загрузка...':coveredCount>=warehouses.length?`все ${warehouses.length} складов покрыты ✓`:`нужно ещё ${warehouses.length-coveredCount} ${warehouses.length-coveredCount===1?'склад':warehouses.length-coveredCount<5?'склада':'складов'} для IL=1.0`},
           {label:'Процент выкупа',value:buyoutLoading?'…':buyoutRate!==null?buyoutRate+'%':'—',sub:buyoutRate!==null?'выкупы / заказы · 30 дней WB API':'загружается из WB API'},
         ].map((m,i)=>(
           <div key={i} style={{background:'#fff',borderRadius:12,padding:'14px 16px',border:'0.5px solid rgba(74,111,82,0.15)'}}>
@@ -250,7 +254,7 @@ export default function Wildberries(){
 
       {activeTab==='signals'&&(
         <div>
-          {coveredCount < WHS.length && (
+          {warehouses.length > 0 && coveredCount < warehouses.length && (
             <div style={{background:'#EEE4C8',borderRadius:10,padding:'10px 14px',marginBottom:16,fontSize:12,color:'#6A4A10',fontWeight:600}}>
               💡 Для индекса локализации 1.0 необходимо покрыть все {warehouses.length} складов.
               Сейчас с остатками: {coveredCount} из {warehouses.length}.
@@ -262,7 +266,7 @@ export default function Wildberries(){
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
               {PRODUCTS.map(prod=>{
                 const total=getTotalStock(prod)
-                const avgRate=WHS.reduce((a,wh)=>a+getDailyRate(wh.id,prod),0)
+                const avgRate=warehouses.reduce((a,wh)=>a+getDailyRate(wh.id,prod),0)
                 const d=avgRate>0?Math.floor(total/avgRate):0
                 return (
                   <div key={prod} style={{background:'#F5F0E8',borderRadius:8,padding:'10px 12px'}}>

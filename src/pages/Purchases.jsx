@@ -247,8 +247,12 @@ export default function Purchases() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
-                  {['Дата','Материал','Кол-во','Сумма','Цена/ед','Поставщик','Статус',''].map(h => (
-                    <th key={h} style={{ padding: '8px 10px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
+                  {[
+                    {l:'Дата', tight:true}, {l:'Материал'}, {l:'Кол-во', tight:true, right:true},
+                    {l:'Сумма', tight:true, right:true}, {l:'Цена/ед', tight:true, right:true},
+                    {l:'Поставщик'}, {l:'Статус', tight:true}, {l:'', tight:true},
+                  ].map(h => (
+                    <th key={h.l} style={{ padding:'8px 10px', textAlign:h.right?'right':'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', ...(h.tight?{width:'1%'}:{}) }}>{h.l}</th>
                   ))}
                 </tr>
               </thead>

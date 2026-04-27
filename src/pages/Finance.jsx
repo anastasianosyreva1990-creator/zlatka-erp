@@ -375,6 +375,9 @@ export default function Finance() {
                 {fmt(COLORS.map(c => { const prod = COLOR_PROD[c]; const qty = wbStocks.filter(s=>s.product===prod).reduce((a,s)=>a+s.quantity,0); return Math.round(qty*BUYOUT*calcUnit(selMonth,c).profitPerUnit) }).reduce((a,b)=>a+b,0))} ₽
               </span>
             </div>
+            <div style={{ marginTop: 8, fontSize: 11, color: '#9A8878' }}>
+              * Расчёт на основе {Math.round(BUYOUT*100)}% выкупа за последний месяц. Фактическая прибыль зависит от реального процента выкупа, который меняется каждый месяц.
+            </div>
           </div>
         </div>
       )}
@@ -392,14 +395,14 @@ export default function Finance() {
                 <tr style={{ background: '#F5F0E8' }}>
                   <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Категория</th>
                   {COLORS.map(c => (
-                    <th key={c} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>
+                    <th key={c} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         <span style={{ width: 7, height: 7, borderRadius: '50%', background: COLOR_DOT[c], display: 'inline-block' }}></span>
                         {c}
                       </span>
                     </th>
                   ))}
-                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Итого</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>Итого</th>
                 </tr>
               </thead>
               <tbody>
