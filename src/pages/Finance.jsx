@@ -407,19 +407,19 @@ export default function Finance() {
           </div>
 
           <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'auto', marginBottom: 16 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
-                  <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Категория</th>
+                  <th style={{ width: 160, padding: '10px 14px', textAlign: 'left', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Категория</th>
                   {COLORS.map(c => (
-                    <th key={c} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>
+                    <th key={c} style={{ width: 100, padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         <span style={{ width: 7, height: 7, borderRadius: '50%', background: COLOR_DOT[c], display: 'inline-block' }}></span>
                         {c}
                       </span>
                     </th>
                   ))}
-                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>Итого</th>
+                  <th style={{ width: 110, padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Итого</th>
                 </tr>
               </thead>
               <tbody>
@@ -546,13 +546,13 @@ export default function Finance() {
           <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(196,168,130,0.2)', fontWeight: 700, fontSize: 14, color: '#1C2E26' }}>
             Зарплаты швей — {MONTH_NAMES[selMonth]}
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
-                    <th style={{ padding: '9px 12px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Швея</th>
-                  {['Тариф','Сдано','Начислено'].map(h => (
-                    <th key={h} style={{ padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>{h}</th>
-                  ))}
+                <th style={{ width: 200, padding: '9px 12px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Швея</th>
+                <th style={{ width: 90, padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Тариф</th>
+                <th style={{ width: 80, padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Сдано</th>
+                <th style={{ width: 110, padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Начислено</th>
               </tr>
             </thead>
             <tbody>
@@ -595,13 +595,16 @@ export default function Finance() {
           <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(196,168,130,0.2)', fontWeight: 700, fontSize: 14, color: '#1C2E26' }}>
             История по месяцам
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
-                    <th style={{ padding: '9px 12px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Месяц</th>
-                  {['Выкупы','Выручка WB','Зарплаты','Материалы','СДЭК','Чистая прибыль'].map(h => (
-                    <th key={h} style={{ padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>{h}</th>
-                  ))}
+                <th style={{ width: 130, padding: '9px 12px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Месяц</th>
+                <th style={{ width: 70, padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Выкупы</th>
+                <th style={{ width: 110, padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Выручка WB</th>
+                <th style={{ width: 100, padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Зарплаты</th>
+                <th style={{ width: 100, padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Материалы</th>
+                <th style={{ width: 80, padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>СДЭК</th>
+                <th style={{ width: 120, padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Чистая прибыль</th>
               </tr>
             </thead>
             <tbody>
