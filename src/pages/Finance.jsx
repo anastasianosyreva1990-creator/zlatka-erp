@@ -24,7 +24,7 @@ const SDEK_RATES = {
 const COLORS = ['Красный','Белый','Черный','Цветной']
 
 function formatPeriod(s) {
-  return 'за период ' + s.replace(/(\d{4})-(\d{2})-(\d{2})/g, (_,y,m,d)=>`${d}.${m}.${y.slice(2)}`)
+  return s.replace(/(\d{4})-(\d{2})-(\d{2})/g, (_,y,m,d)=>`${d}.${m}.${y.slice(2)}`).replace(/—/g, ' – ')
 }
 
 export default function Finance() {
@@ -550,6 +550,28 @@ export default function Finance() {
                   </tr>
                 )
               })}
+              {(() => {
+                const totQty = sewers.reduce((a, sw) => a + productions.filter(p => p.date?.startsWith(selMonth) && p.sewer_id === sw.id).reduce((s, p) => s + p.quantity, 0), 0)
+                const totEarned = sewers.reduce((a, sw) => {
+                  const qty = productions.filter(p => p.date?.startsWith(selMonth) && p.sewer_id === sw.id).reduce((s, p) => s + p.quantity, 0)
+                  return a + qty * sw.tariff
+                }, 0)
+                const profits = sewers.map(sw => calcSewerProfit(sw))
+                const totRevenue = profits.reduce((a, p) => a + p.revenue, 0)
+                const totNetProfit = profits.reduce((a, p) => a + p.netProfit, 0)
+                return (
+                  <tr style={{ background: '#F5F0E8', fontWeight: 800 }}>
+                    <td style={{ padding: '9px 12px', fontWeight: 800, color: '#1C2E26', borderTop: '1px solid rgba(196,168,130,0.2)' }}>Итого</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', borderTop: '1px solid rgba(196,168,130,0.2)', color: '#7A6A5A' }}>—</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, borderTop: '1px solid rgba(196,168,130,0.2)' }}>{fmt(totQty)} шт</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: '#6A304A', borderTop: '1px solid rgba(196,168,130,0.2)' }}>{fmt(totEarned)} ₽</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: '#1A6B28', borderTop: '1px solid rgba(196,168,130,0.2)' }}>{totRevenue > 0 ? fmt(totRevenue) + ' ₽' : '—'}</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: totNetProfit >= 0 ? '#1A6B28' : '#6A304A', borderTop: '1px solid rgba(196,168,130,0.2)' }}>
+                      {totRevenue > 0 ? (totNetProfit >= 0 ? '+' : '') + fmt(totNetProfit) + ' ₽' : '—'}
+                    </td>
+                  </tr>
+                )
+              })()}
             </tbody>
           </table>
         </div>

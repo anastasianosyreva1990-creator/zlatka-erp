@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 const PCOL = {'Кокошник Красный':'#C0392B','Кокошник Белый':'#7F8C8D','Кокошник Черный':'#2C3E50','Кокошник Цветной':'#27AE60','Кокошник Ягоды':'#7D3C98','Кокошник Петушки':'#E67E22'}
@@ -220,6 +221,9 @@ export default function Wildberries(){
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
         <h1 style={{fontSize:22,fontWeight:800,color:'#1C2E26'}}>Wildberries / <span style={{color:'#C4A882'}}>Склады</span></h1>
+        <Link to="/settings" style={{fontSize:12,fontWeight:700,color:'#7A6A5A',textDecoration:'none',padding:'5px 12px',border:'1px solid rgba(74,111,82,0.2)',borderRadius:8,background:'transparent'}}>
+          ⚙ Управление складами
+        </Link>
       </div>
 
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>

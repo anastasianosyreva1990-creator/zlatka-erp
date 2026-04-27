@@ -418,7 +418,7 @@ export default function Batches() {
                             <div>
                               <div style={{ fontSize: 14, fontWeight: 800, color: '#1C2E26' }}>{item.warehouse.name}</div>
                               <div style={{ fontSize: 10, color: '#5A4A3A', marginTop: 2 }}>
-                                WB: {logCost(item.warehouse)} ₽/шт + СДЭК: ~{sdekPerUnit(item.warehouse)} ₽/шт = <strong>{logCost(item.warehouse) + sdekPerUnit(item.warehouse)} ₽/шт</strong> логистика
+                                WB {logCost(item.warehouse)} + СДЭК {sdekPerUnit(item.warehouse)} = <strong>{logCost(item.warehouse) + sdekPerUnit(item.warehouse)} ₽/шт логистика</strong>
                               </div>
                             </div>
                             <div style={{ fontSize: 18, fontWeight: 800, color: '#1A6B28' }}>{item.total} шт</div>
