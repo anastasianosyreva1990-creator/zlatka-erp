@@ -64,6 +64,8 @@ export default function Settings() {
   const [newWhFields, setNewWhFields] = useState({id:'',name:'',fo:'',wb_tariff:'',sdek_tariff:''})
   const [seedingWh, setSeedingWh] = useState(false)
   const [updatingTariffs, setUpdatingTariffs] = useState(false)
+  const [editTariffId, setEditTariffId] = useState(null)
+  const [editTariffVal, setEditTariffVal] = useState('')
 
   // --- Артикулы ---
   const [products, setProducts] = useState([])
@@ -205,6 +207,13 @@ export default function Settings() {
     }
     setUpdatingTariffs(false)
     setTimeout(() => setFb(''), 6000)
+  }
+
+  async function saveTariff(whId, val) {
+    const tariff = parseInt(val) || 0
+    await supabase.from('wb_warehouses').update({ wb_tariff: tariff }).eq('id', whId)
+    setEditTariffId(null)
+    loadWarehouses()
   }
 
   async function toggleWhActive(wh) {
@@ -389,7 +398,25 @@ export default function Settings() {
                     <tr key={wh.id} style={{ opacity: wh.active===false ? 0.5 : 1 }}>
                       <td style={{ padding:'10px 14px', fontWeight:700, borderBottom:'0.5px solid rgba(74,111,82,0.07)' }}>{wh.name}</td>
                       <td style={{ padding:'10px 14px', color:'#7A6A5A', borderBottom:'0.5px solid rgba(74,111,82,0.07)' }}>{wh.fo}</td>
-                      <td style={{ padding:'10px 14px', textAlign:'right', fontWeight:700, borderBottom:'0.5px solid rgba(74,111,82,0.07)' }}>{fmt(wh.wb_tariff ?? wh.tariff ?? 0)} ₽</td>
+                      <td style={{ padding:'6px 14px', textAlign:'right', borderBottom:'0.5px solid rgba(74,111,82,0.07)' }}>
+                        {editTariffId === wh.id ? (
+                          <input
+                            type="number" autoFocus
+                            value={editTariffVal}
+                            onChange={e => setEditTariffVal(e.target.value)}
+                            onBlur={() => saveTariff(wh.id, editTariffVal)}
+                            onKeyDown={e => { if (e.key === 'Enter') saveTariff(wh.id, editTariffVal); if (e.key === 'Escape') setEditTariffId(null) }}
+                            style={{ width: 70, padding: '4px 8px', border: '1px solid #1C2E26', borderRadius: 6, fontSize: 13, textAlign: 'right', fontWeight: 700 }}
+                          />
+                        ) : (
+                          <span
+                            onClick={() => { setEditTariffId(wh.id); setEditTariffVal(String(wh.wb_tariff ?? wh.tariff ?? 0)) }}
+                            title="Нажмите чтобы изменить"
+                            style={{ fontWeight: 700, cursor: 'text', borderBottom: '1px dashed rgba(74,111,82,0.3)', paddingBottom: 1 }}>
+                            {fmt(wh.wb_tariff ?? wh.tariff ?? 0)} ₽
+                          </span>
+                        )}
+                      </td>
                       <td style={{ padding:'10px 14px', textAlign:'right', fontWeight:700, borderBottom:'0.5px solid rgba(74,111,82,0.07)' }}>{fmt(wh.sdek_tariff ?? 0)} ₽</td>
                       <td style={{ padding:'10px 14px', borderBottom:'0.5px solid rgba(74,111,82,0.07)' }}>
                         <span style={{ fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:700,
@@ -419,7 +446,7 @@ export default function Settings() {
             </table>
           </div>
           <div style={{ marginTop:10, fontSize:11, color:'#9A8878' }}>
-            * Доставка до клиента — тариф WB за доставку покупателю (₽/шт, для 0.8л товара). Кнопка «↓ Тарифы из WB» загружает актуальные тарифы из API. СДЭК — стоимость партии от вас до склада WB.
+            * Доставка до клиента — тариф WB за доставку покупателю (₽/шт). Кликните на цифру чтобы изменить вручную. СДЭК — стоимость партии от вас до склада WB.
           </div>
         </div>
       )}
