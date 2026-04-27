@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-const PCOL = {'Кокошник Красный':'#C0392B','Кокошник Белый':'#7F8C8D','Кокошник Черный':'#2C3E50','Кокошник Цветной':'#27AE60'}
-const PLBL = {'Кокошник Красный':'Красный','Кокошник Белый':'Белый','Кокошник Черный':'Чёрный','Кокошник Цветной':'Цветной'}
+const PCOL = {'Кокошник Красный':'#C0392B','Кокошник Белый':'#7F8C8D','Кокошник Черный':'#2C3E50','Кокошник Цветной':'#27AE60','Кокошник Ягоды':'#7D3C98','Кокошник Петушки':'#E67E22'}
+const PLBL = {'Кокошник Красный':'Красный','Кокошник Белый':'Белый','Кокошник Черный':'Чёрный','Кокошник Цветной':'Цветной','Кокошник Ягоды':'Ягоды','Кокошник Петушки':'Петушки'}
 const PRODUCTS = Object.keys(PCOL)
 const fmt = x => Math.round(x).toLocaleString('ru-RU')
-const DAILY = {'Кокошник Красный':515/14,'Кокошник Белый':63/14,'Кокошник Черный':164/14,'Кокошник Цветной':19/14}
+const DAILY_FALLBACK = {'Кокошник Красный':515/14,'Кокошник Белый':63/14,'Кокошник Черный':164/14,'Кокошник Цветной':19/14,'Кокошник Ягоды':0,'Кокошник Петушки':0}
 const IL=1.40,IRP=0.0207,VOL=0.8,PRICE=850
 
 const WHS = [
@@ -24,13 +24,18 @@ const MONTH_NAMES = {
   '2026-01':'Январь 2026','2026-02':'Февраль 2026','2026-03':'Март 2026','2026-04':'Апрель 2026'
 }
 
-function logCost(wh){return Math.round(VOL*30*(wh.tariff/100)*IL+PRICE*IRP)}
+function logCost(wh){return wh.tariff||0}
 
 export default function Wildberries(){
+  const [warehouses,setWarehouses]=useState(WHS)
   const [wbStocks,setWbStocks]=useState([])
+  const [wbSales,setWbSales]=useState([])
+  const [wbMonthly,setWbMonthly]=useState([])
   const [shipments,setShipments]=useState([])
   const [orders,setOrders]=useState([])
   const [loading,setLoading]=useState(true)
+  const [editShip,setEditShip]=useState(null)
+  const [editShipFields,setEditShipFields]=useState({})
   const [activeTab,setActiveTab]=useState('signals')
   const [shDate,setShDate]=useState(new Date().toISOString().split('T')[0])
   const [shType,setShType]=useState('Кокошник Красный')
@@ -56,18 +61,26 @@ export default function Wildberries(){
 
   async function loadAll(){
     setLoading(true)
-    const [{data:wb},{data:sh},{data:ord}]=await Promise.all([
+    const [{data:wb},{data:ws},{data:sh},{data:ord},{data:wm},{data:whDb}]=await Promise.all([
       supabase.from('wb_stocks').select('*'),
+      supabase.from('wb_sales_by_wh').select('*'),
       supabase.from('shipments').select('*').order('ship_date',{ascending:false}),
       supabase.from('wb_orders').select('*').order('date'),
+      supabase.from('wb_monthly').select('*').order('month'),
+      supabase.from('wb_warehouses').select('*').eq('active',true).order('name'),
     ])
-    setWbStocks(wb||[]);setShipments(sh||[]);setOrders(ord||[])
+    setWbStocks(wb||[]);setWbSales(ws||[]);setShipments(sh||[]);setOrders(ord||[]);setWbMonthly(wm||[])
+    if(whDb?.length) setWarehouses(whDb.map(w=>({id:w.id,name:w.name,fo:w.fo||'',tariff:w.wb_tariff||0,sdek:w.sdek_tariff||0})))
     setLoading(false)
   }
 
   function getStock(whId,prod){return wbStocks.find(s=>s.warehouse===whId&&s.product===prod)?.quantity||0}
-  function daysLeft(whId,prod){const qty=getStock(whId,prod);const spd=DAILY[prod]||1;return Math.floor(qty/spd)}
-  function getTotalStock(prod){return WHS.reduce((a,wh)=>a+getStock(wh.id,prod),0)}
+  function getDailyRate(whId,prod){
+    const found=wbSales.find(s=>s.warehouse===whId&&s.product===prod)
+    return found?.daily_rate??DAILY_FALLBACK[prod]??0
+  }
+  function daysLeft(whId,prod){const qty=getStock(whId,prod);const spd=getDailyRate(whId,prod)||1;return Math.floor(qty/spd)}
+  function getTotalStock(prod){return warehouses.reduce((a,wh)=>a+getStock(wh.id,prod),0)}
 
   async function runUpdate(){
     setUpdating(true)
@@ -97,7 +110,7 @@ export default function Wildberries(){
 
   async function addShipment(){
     if(!shQty||!shDate){setShFb('Заполните дату и количество');return}
-    const wh=WHS.find(w=>w.id===shWh)
+    const wh=warehouses.find(w=>w.id===shWh)
     await supabase.from('shipments').insert({
       ship_date:shDate,product:shType,quantity:parseInt(shQty),
       warehouse:wh?.name||shWh,tk:shTk,invoice_num:shNakl,
@@ -127,11 +140,42 @@ export default function Wildberries(){
     await supabase.from('shipments').update({status:val}).eq('id',id);loadAll()
   }
 
-  const foGroups={}
-  WHS.forEach(wh=>{if(!foGroups[wh.fo])foGroups[wh.fo]=[];foGroups[wh.fo].push(wh)})
+  async function deleteShipment(id){
+    if(!window.confirm('Удалить строку отгрузки?')) return
+    await supabase.from('shipments').delete().eq('id',id);loadAll()
+  }
 
-  let defCount=0
-  WHS.forEach(wh=>PRODUCTS.forEach(prod=>{if(DAILY[prod]>0.5&&daysLeft(wh.id,prod)<=3)defCount++}))
+  async function saveShipEdit(){
+    if(!editShip) return
+    await supabase.from('shipments').update({
+      ship_date:editShipFields.ship_date||null,
+      product:editShipFields.product,
+      quantity:parseInt(editShipFields.quantity)||0,
+      warehouse:editShipFields.warehouse,
+      tk:editShipFields.tk||null,
+      invoice_num:editShipFields.invoice_num||null,
+      wb_supply_num:editShipFields.wb_supply_num||null,
+      shk_box:editShipFields.shk_box||null,
+      arrival_date:editShipFields.arrival_date||null,
+      status:editShipFields.status,
+    }).eq('id',editShip.id)
+    setEditShip(null);loadAll()
+  }
+
+  function calcBuyoutRate(){
+    const totalSold=wbMonthly.reduce((a,d)=>a+(d.sold_red||0)+(d.sold_white||0)+(d.sold_black||0)+(d.sold_color||0),0)
+    const totalOrders=orders.reduce((a,o)=>a+o.red+o.white+o.black+o.color,0)
+    if(totalOrders>0&&totalSold>0) return Math.round(totalSold/totalOrders*100)
+    return 47
+  }
+
+  const foGroups={}
+  warehouses.forEach(wh=>{if(!foGroups[wh.fo])foGroups[wh.fo]=[];foGroups[wh.fo].push(wh)})
+
+  const defCount = warehouses.filter(wh =>
+    PRODUCTS.some(prod => getDailyRate(wh.id,prod) > 0.3 && daysLeft(wh.id,prod) <= 3)
+  ).length
+  const coveredCount = warehouses.filter(wh => PRODUCTS.some(prod => getStock(wh.id,prod) > 0)).length
 
   const monthOrders=orders.filter(o=>o.date?.startsWith(selMonth))
   const daysInMonth=new Date(parseInt(selMonth.split('-')[0]),parseInt(selMonth.split('-')[1]),0).getDate()
@@ -166,9 +210,9 @@ export default function Wildberries(){
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
         {[
           {label:'Заказов в день (апр)',value:fmt(avgPerDay||54),sub:'средний темп'},
-          {label:'Складов с дефицитом',value:defCount,color:defCount>0?'#6A1030':'#1A6B28',sub:'нужна отгрузка'},
-          {label:'Индекс локализации',value:'1.40',color:'#6A1030',sub:'наценка ~40%'},
-          {label:'Процент выкупа',value:'47%',sub:'из статистики WB'},
+          {label:'Складов с дефицитом',value:defCount,color:defCount>0?'#6A1030':'#1A6B28',sub:`из ${warehouses.length} складов`},
+          {label:'Индекс локализации',value:'1.40',color:'#6A1030',sub:`покрыто ${coveredCount} из ${warehouses.length} складов`},
+          {label:'Процент выкупа',value:calcBuyoutRate()+'%',sub:'авто · заказы / выкупы WB'},
         ].map((m,i)=>(
           <div key={i} style={{background:'#fff',borderRadius:12,padding:'14px 16px',border:'0.5px solid rgba(74,111,82,0.15)'}}>
             <div style={{fontSize:10,color:'#7A6A5A',fontWeight:700,textTransform:'uppercase',letterSpacing:0.5,marginBottom:4}}>{m.label}</div>
@@ -187,12 +231,20 @@ export default function Wildberries(){
 
       {activeTab==='signals'&&(
         <div>
+          {coveredCount < WHS.length && (
+            <div style={{background:'#EEE4C8',borderRadius:10,padding:'10px 14px',marginBottom:16,fontSize:12,color:'#6A4A10',fontWeight:600}}>
+              💡 Для индекса локализации 1.0 необходимо покрыть все {warehouses.length} складов.
+              Сейчас с остатками: {coveredCount} из {warehouses.length}.
+              Нужно отгрузить ещё на {warehouses.length - coveredCount} {warehouses.length - coveredCount === 1 ? 'склад' : warehouses.length - coveredCount < 5 ? 'склада' : 'складов'}.
+            </div>
+          )}
           <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',padding:'14px 18px',marginBottom:16}}>
             <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,textTransform:'uppercase',letterSpacing:0.5,marginBottom:10}}>Итого на всех складах WB</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
               {PRODUCTS.map(prod=>{
                 const total=getTotalStock(prod)
-                const d=DAILY[prod]>0?Math.floor(total/DAILY[prod]):0
+                const avgRate=WHS.reduce((a,wh)=>a+getDailyRate(wh.id,prod),0)
+                const d=avgRate>0?Math.floor(total/avgRate):0
                 return (
                   <div key={prod} style={{background:'#F5F0E8',borderRadius:8,padding:'10px 12px'}}>
                     <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
@@ -214,9 +266,9 @@ export default function Wildberries(){
                 {whs.map(wh=>{
                   let hasCrit=false,hasWarn=false
                   PRODUCTS.forEach(prod=>{
-                    const d=daysLeft(wh.id,prod),spd=DAILY[prod]||0
-                    if(spd>0.5&&d<=3) hasCrit=true
-                    else if(spd>0.5&&d<=7) hasWarn=true
+                    const d=daysLeft(wh.id,prod),spd=getDailyRate(wh.id,prod)||0
+                    if(spd>0.3&&d<=3) hasCrit=true
+                    else if(spd>0.3&&d<=7) hasWarn=true
                   })
                   const lc=Math.round(logCost(wh))
                   const borderColor=hasCrit?'#6A1030':hasWarn?'#6A4A10':'rgba(74,111,82,0.2)'
@@ -237,8 +289,8 @@ export default function Wildberries(){
                           <span>Цвет</span><span style={{textAlign:'right'}}>Остаток</span><span style={{textAlign:'right'}}>шт/день</span><span style={{textAlign:'right'}}>Статус</span>
                         </div>
                         {PRODUCTS.map(prod=>{
-                          const spd=DAILY[prod]||0
-                          if(spd<0.3) return null
+                          const spd=getDailyRate(wh.id,prod)||0
+                          if(spd<0.3&&DAILY_FALLBACK[prod]<0.3) return null
                           const qty=getStock(wh.id,prod)
                           const d=daysLeft(wh.id,prod)
                           const recQty=Math.max(0,Math.ceil(spd*14-qty))
@@ -422,7 +474,7 @@ export default function Wildberries(){
                 <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>Склад WB</div>
                 <select value={shWh} onChange={e=>setShWh(e.target.value)}
                   style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13}}>
-                  {WHS.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
+                  {warehouses.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
                 </select>
               </div>
             </div>
@@ -467,32 +519,32 @@ export default function Wildberries(){
             <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,minWidth:800}}>
               <thead>
                 <tr style={{background:'#F5F0E8'}}>
-                  {['Дата','Тип','Кол-во','Направление','ТК','№ Накладной','№ Поставки WB','Приход WB','Статус'].map(h=>(
-                    <th key={h} style={{padding:'9px 12px',textAlign:'left',color:'#4A3A2A',fontWeight:700,fontSize:11,borderBottom:'1px solid rgba(196,168,130,0.2)',whiteSpace:'nowrap'}}>{h}</th>
+                  {['Дата','Тип','Кол-во','Направление','ТК','№ Накладной','№ Поставки WB','Приход WB','Статус',''].map(h=>(
+                    <th key={h} style={{padding:'8px 10px',textAlign:'left',color:'#4A3A2A',fontWeight:700,fontSize:11,borderBottom:'1px solid rgba(196,168,130,0.2)',whiteSpace:'nowrap'}}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {shipments.map(s=>(
                   <tr key={s.id}>
-                    <td style={{padding:'8px 12px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap'}}>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap'}}>
                       {s.ship_date?new Date(s.ship_date).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—'}
                     </td>
-                    <td style={{padding:'8px 12px',borderBottom:'0.5px solid rgba(74,111,82,0.07)'}}>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',whiteSpace:'nowrap'}}>
                       <span style={{display:'inline-flex',alignItems:'center',gap:5,fontWeight:700}}>
-                        <span style={{width:7,height:7,borderRadius:'50%',background:PCOL[s.product]||'#888'}}></span>
+                        <span style={{width:7,height:7,borderRadius:'50%',background:PCOL[s.product]||'#888',flexShrink:0}}></span>
                         {PLBL[s.product]||s.product}
                       </span>
                     </td>
-                    <td style={{padding:'8px 12px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',fontWeight:800}}>{fmt(s.quantity)}</td>
-                    <td style={{padding:'8px 12px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',fontWeight:600}}>{s.warehouse}</td>
-                    <td style={{padding:'8px 12px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A'}}>{s.tk}</td>
-                    <td style={{padding:'8px 12px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',fontSize:11}}>{s.invoice_num||'—'}</td>
-                    <td style={{padding:'8px 12px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',fontSize:11}}>{s.wb_supply_num||'—'}</td>
-                    <td style={{padding:'8px 12px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',fontSize:11}}>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',fontWeight:800,whiteSpace:'nowrap'}}>{fmt(s.quantity)}</td>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',fontWeight:600,whiteSpace:'nowrap'}}>{s.warehouse}</td>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap'}}>{s.tk||'—'}</td>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap'}}>{s.invoice_num||'—'}</td>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap'}}>{s.wb_supply_num||'—'}</td>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap'}}>
                       {s.arrival_date?new Date(s.arrival_date).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—'}
                     </td>
-                    <td style={{padding:'8px 12px',borderBottom:'0.5px solid rgba(74,111,82,0.07)'}}>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',whiteSpace:'nowrap'}}>
                       <select value={s.status} onChange={e=>setShipStatus(s.id,e.target.value)}
                         style={{fontSize:11,padding:'3px 6px',borderRadius:6,border:'1px solid rgba(74,111,82,0.25)',background:'#fff',cursor:'pointer',fontWeight:700}}>
                         <option value="В пути">В пути</option>
@@ -500,9 +552,19 @@ export default function Wildberries(){
                         <option value="Принято WB">Принято WB</option>
                       </select>
                     </td>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',whiteSpace:'nowrap'}}>
+                      <button onClick={()=>{setEditShip(s);setEditShipFields({...s})}}
+                        style={{fontSize:11,padding:'3px 7px',borderRadius:6,border:'1px solid rgba(196,168,130,0.4)',background:'rgba(196,168,130,0.1)',color:'#4A3A2A',cursor:'pointer',fontWeight:700,marginRight:4}}>
+                        ✎
+                      </button>
+                      <button onClick={()=>deleteShipment(s.id)}
+                        style={{fontSize:11,padding:'3px 7px',borderRadius:6,border:'1px solid #EED4DD',background:'#EED4DD',color:'#6A1030',cursor:'pointer',fontWeight:700}}>
+                        ×
+                      </button>
+                    </td>
                   </tr>
                 ))}
-                {shipments.length===0&&<tr><td colSpan={9} style={{textAlign:'center',padding:32,color:'#7A6A5A'}}>Нет отгрузок</td></tr>}
+                {shipments.length===0&&<tr><td colSpan={10} style={{textAlign:'center',padding:32,color:'#7A6A5A'}}>Нет отгрузок</td></tr>}
               </tbody>
             </table>
           </div>
@@ -537,6 +599,61 @@ export default function Wildberries(){
             <div style={{marginTop:16,fontSize:11,color:'#9A8878'}}>
               Автообновление: каждый день в 7:00 МСК
             </div>
+          </div>
+        </div>
+      )}
+      {/* ПОПАП — РЕДАКТИРОВАТЬ ОТГРУЗКУ */}
+      {editShip&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}} onClick={()=>setEditShip(null)}>
+          <div style={{background:'#fff',borderRadius:16,width:520,padding:'24px',maxHeight:'90vh',overflow:'auto'}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+              <span style={{fontWeight:800,fontSize:16,color:'#1C2E26'}}>Редактировать отгрузку</span>
+              <button onClick={()=>setEditShip(null)} style={{fontSize:20,background:'none',border:'none',cursor:'pointer',color:'#7A6A5A'}}>×</button>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
+              {[
+                {label:'Дата сдачи',key:'ship_date',type:'date'},
+                {label:'Дата прихода на WB',key:'arrival_date',type:'date'},
+                {label:'Количество',key:'quantity',type:'number'},
+                {label:'ТК',key:'tk',type:'text'},
+                {label:'№ Накладной',key:'invoice_num',type:'text'},
+                {label:'№ Поставки WB',key:'wb_supply_num',type:'text'},
+                {label:'ШК Короба',key:'shk_box',type:'text'},
+              ].map(f=>(
+                <div key={f.key}>
+                  <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>{f.label}</div>
+                  <input type={f.type} value={editShipFields[f.key]||''} onChange={e=>setEditShipFields({...editShipFields,[f.key]:e.target.value})}
+                    style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13,boxSizing:'border-box'}}/>
+                </div>
+              ))}
+              <div>
+                <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>Тип (цвет)</div>
+                <select value={editShipFields.product||''} onChange={e=>setEditShipFields({...editShipFields,product:e.target.value})}
+                  style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13}}>
+                  {PRODUCTS.map(p=><option key={p} value={p}>{PLBL[p]||p}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>Склад WB</div>
+                <select value={editShipFields.warehouse||''} onChange={e=>setEditShipFields({...editShipFields,warehouse:e.target.value})}
+                  style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13}}>
+                  {warehouses.map(w=><option key={w.id} value={w.name}>{w.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>Статус</div>
+                <select value={editShipFields.status||'В пути'} onChange={e=>setEditShipFields({...editShipFields,status:e.target.value})}
+                  style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13}}>
+                  <option value="В пути">В пути</option>
+                  <option value="Доставлено">Доставлено</option>
+                  <option value="Принято WB">Принято WB</option>
+                </select>
+              </div>
+            </div>
+            <button onClick={saveShipEdit}
+              style={{width:'100%',padding:'10px',background:'#1C2E26',color:'#C4A882',border:'none',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer'}}>
+              Сохранить
+            </button>
           </div>
         </div>
       )}

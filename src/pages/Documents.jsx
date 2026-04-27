@@ -8,7 +8,7 @@ const CUSTOMER = {
   bank:'АО «Тинькофф Банк»',account:'40802810500004306960',
   bik:'044525974',phone:'8-909-186-29-49',email:'naastia@yandex.ru',
 }
-const PCOL={'Кокошник Красный':'#C0392B','Кокошник Белый':'#7F8C8D','Кокошник Черный':'#2C3E50','Кокошник Цветной':'#27AE60'}
+const PCOL={'Кокошник Красный':'#C0392B','Кокошник Белый':'#7F8C8D','Кокошник Черный':'#2C3E50','Кокошник Цветной':'#27AE60','Кокошник Ягоды':'#7D3C98','Кокошник Петушки':'#E67E22'}
 const MONTHS=['Январь 2026','Февраль 2026','Март 2026','Апрель 2026']
 const MONTH_DATE={'Март 2026':'31 марта 2026','Апрель 2026':'30 апреля 2026','Февраль 2026':'28 февраля 2026','Январь 2026':'31 января 2026'}
 const MONTH_SHORT={'Март 2026':'марта','Апрель 2026':'апреля','Февраль 2026':'февраля','Январь 2026':'января'}
@@ -131,7 +131,7 @@ export default function Documents(){
               if(inv?.status==='paid'){stBg='#D8EED8';stColor='#1A4A28';stText='Оплачено'}
               else if(inv?.status==='unpaid'){stBg='#EED4DD';stColor='#6A1030';stText='Ожидает оплаты'}
               return (
-                <div key={sw.id} style={{background:'#fff',border:'0.5px solid rgba(74,111,82,0.15)',borderRadius:12,overflow:'hidden'}}>
+                <div key={sw.id} onClick={()=>qty>0&&setActPopup({sewer:sw,month:selMonth,byColor,total:{qty,sum},inv})} style={{background:'#fff',border:'0.5px solid rgba(74,111,82,0.15)',borderRadius:12,overflow:'hidden',cursor:qty>0?'pointer':'default'}}>
                   <div style={{background:'#1C2E26',padding:'10px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                     <span style={{fontWeight:800,fontSize:13,color:'#F2EBE0'}}>{sw.name}</span>
                     <span style={{fontSize:10,padding:'2px 8px',borderRadius:8,background:stBg,color:stColor,fontWeight:800}}>{stText}</span>
@@ -156,26 +156,11 @@ export default function Documents(){
                         <span style={{color:'#1A6B28'}}>{fmt(sum)} ₽</span>
                       </div>
                     )}
-                    <div style={{display:'flex',gap:6,marginTop:8,flexWrap:'wrap'}}>
-                      {qty>0&&(
-                        <button onClick={()=>setActPopup({sewer:sw,month:selMonth,byColor,total:{qty,sum},inv})}
-                          style={{fontSize:11,padding:'4px 10px',borderRadius:8,border:'1px solid rgba(196,168,130,0.4)',background:'rgba(196,168,130,0.1)',color:'#4A3A2A',cursor:'pointer',fontWeight:700}}>
-                          Просмотр акта
-                        </button>
-                      )}
-                      {inv?.status==='unpaid'&&(
-                        <button onClick={()=>setInvStatus(inv.id,'paid')}
-                          style={{fontSize:11,padding:'4px 10px',borderRadius:8,border:'1px solid rgba(74,111,82,0.3)',background:'rgba(74,111,82,0.08)',color:'#1A4A28',cursor:'pointer',fontWeight:700}}>
-                          Отметить оплаченным
-                        </button>
-                      )}
-                      {!inv&&qty>0&&(
-                        <button onClick={()=>{setActiveTab('add');setInvWho(sw.id);setInvMonth(selMonth);setInvSum(sum.toString())}}
-                          style={{fontSize:11,padding:'4px 10px',borderRadius:8,border:'1px solid rgba(74,111,82,0.2)',background:'transparent',color:'#3A2A1A',cursor:'pointer',fontWeight:700}}>
-                          + Счёт
-                        </button>
-                      )}
-                    </div>
+                    {qty>0&&(
+                      <div style={{marginTop:6,fontSize:11,color:'#9A8878',fontWeight:600}}>
+                        Нажмите для просмотра акта
+                      </div>
+                    )}
                   </div>
                 </div>
               )

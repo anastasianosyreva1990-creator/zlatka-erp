@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 const fmt = x => Math.round(x).toLocaleString('ru-RU')
-const PCOL = {'Кокошник Красный':'#C0392B','Кокошник Белый':'#7F8C8D','Кокошник Черный':'#2C3E50','Кокошник Цветной':'#27AE60'}
-const PLBL = {'Кокошник Красный':'Красный','Кокошник Белый':'Белый','Кокошник Черный':'Чёрный','Кокошник Цветной':'Цветной'}
+const PCOL = {'Кокошник Красный':'#C0392B','Кокошник Белый':'#7F8C8D','Кокошник Черный':'#2C3E50','Кокошник Цветной':'#27AE60','Кокошник Ягоды':'#7D3C98','Кокошник Петушки':'#E67E22'}
+const PLBL = {'Кокошник Красный':'Красный','Кокошник Белый':'Белый','Кокошник Черный':'Чёрный','Кокошник Цветной':'Цветной','Кокошник Ягоды':'Ягоды','Кокошник Петушки':'Петушки'}
 const PRODUCTS = Object.keys(PCOL)
 const MIN_STOCK = 50
 
@@ -12,23 +12,30 @@ const MAT_COST = {
   'Кокошник Белый':   0.0476*286.50 + 0.2*17.03 + 2*0.92 + 30 + 1.19 + 10.90,
   'Кокошник Черный':  0.0476*289.77 + 0.2*20.09 + 2*0.83 + 30 + 1.19 + 10.90,
   'Кокошник Цветной': 0.0555*365.83 + 0.2*20.09 + 2*0.83 + 30 + 1.19 + 10.90,
+  'Кокошник Ягоды':   0.0555*365.83 + 0.2*20.09 + 2*0.83 + 30 + 1.19 + 10.90,
+  'Кокошник Петушки': 0.0650*365.83 + 0.2*20.09 + 2*0.83 + 30 + 1.19 + 10.90,
 }
 const BOX_COST = 77.25
+const IL = 1.40, IRP = 0.0207, VOL = 0.8, PRICE = 850
 
 const WHS = [
-  {id:'ekb',name:'Екатеринбург',fo:'Уральский',tariff:190},
-  {id:'vlad',name:'Владимир',fo:'Центральный',tariff:130},
-  {id:'voronezh',name:'Воронеж',fo:'Центральный',tariff:130},
-  {id:'kotovsk',name:'Котовск',fo:'Центральный',tariff:120},
-  {id:'novosem',name:'Новосемейкино',fo:'Приволжский',tariff:160},
-  {id:'volgograd',name:'Волгоград',fo:'Южный',tariff:170},
-  {id:'ryazan',name:'Рязань',fo:'Центральный',tariff:130},
+  {id:'ekb',name:'Екатеринбург',fo:'Уральский',tariff:190,sdek:934},
+  {id:'vlad',name:'Владимир',fo:'Центральный',tariff:130,sdek:1354},
+  {id:'voronezh',name:'Воронеж',fo:'Центральный',tariff:130,sdek:1460},
+  {id:'kotovsk',name:'Котовск',fo:'Центральный',tariff:120,sdek:1565},
+  {id:'novosem',name:'Новосемейкино',fo:'Приволжский',tariff:160,sdek:1249},
+  {id:'volgograd',name:'Волгоград',fo:'Южный',tariff:170,sdek:1670},
+  {id:'ryazan',name:'Рязань',fo:'Центральный',tariff:130,sdek:1355},
 ]
+
+function logCost(wh) { return wh.tariff || 0 }
+function sdekPerUnit(wh) { return Math.round(wh.sdek / 96) }
 
 export default function Batches() {
   const [batches, setBatches] = useState([])
   const [batchItems, setBatchItems] = useState([])
   const [sewers, setSewers] = useState([])
+  const [warehouses, setWarehouses] = useState(WHS)
   const [wbStocks, setWbStocks] = useState([])
   const [wbSales, setWbSales] = useState([])
   const [readyStock, setReadyStock] = useState([])
@@ -48,13 +55,14 @@ export default function Batches() {
 
   async function loadAll() {
     setLoading(true)
-    const [{ data: b }, { data: bi }, { data: sw }, { data: wb }, { data: rs }, { data: ws }] = await Promise.all([
+    const [{ data: b }, { data: bi }, { data: sw }, { data: wb }, { data: rs }, { data: ws }, { data: whDb }] = await Promise.all([
       supabase.from('batches').select('*').order('created_at', { ascending: false }),
       supabase.from('batch_items').select('*, sewers(name, tariff)'),
       supabase.from('sewers').select('*').eq('active', true),
       supabase.from('wb_stocks').select('*'),
       supabase.from('ready_stock').select('*'),
       supabase.from('wb_sales_by_wh').select('*'),
+      supabase.from('wb_warehouses').select('*').eq('active', true).order('name'),
     ])
     setBatches(b || [])
     setBatchItems(bi || [])
@@ -62,6 +70,7 @@ export default function Batches() {
     setWbStocks(wb || [])
     setReadyStock(rs || [])
     setWbSales(ws || [])
+    if (whDb?.length) setWarehouses(whDb.map(w => ({ id: w.id, name: w.name, fo: w.fo || '', tariff: w.wb_tariff || 0, sdek: w.sdek_tariff || 0 })))
     setLoading(false)
   }
 
@@ -111,7 +120,7 @@ export default function Batches() {
 
     // Считаем дефицит по всем складам и цветам
     const allDeficits = []
-    WHS.forEach(wh => {
+    warehouses.forEach(wh => {
       PRODUCTS.forEach(prod => {
         const qty = getWbStock(wh.id, prod)
         const dailyRate = getDailyRate(wh.id, prod)
@@ -310,7 +319,7 @@ export default function Batches() {
             {filtered.map(batch => {
               const byColor = batchByColor(batch.id)
               const cost = calcBatchCost(batch.id)
-              const wh = WHS.find(w => w.id === batch.target_warehouse)
+              const wh = warehouses.find(w => w.id === batch.target_warehouse)
               return (
                 <tr key={batch.id}>
                   <td style={{ padding: '9px 12px', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>#{batch.batch_num}</td>
@@ -408,7 +417,9 @@ export default function Batches() {
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                             <div>
                               <div style={{ fontSize: 14, fontWeight: 800, color: '#1C2E26' }}>{item.warehouse.name}</div>
-                              <div style={{ fontSize: 11, color: '#5A4A3A' }}>{item.warehouse.fo} ФО</div>
+                              <div style={{ fontSize: 10, color: '#5A4A3A', marginTop: 2 }}>
+                                WB: {logCost(item.warehouse)} ₽/шт + СДЭК: ~{sdekPerUnit(item.warehouse)} ₽/шт = <strong>{logCost(item.warehouse) + sdekPerUnit(item.warehouse)} ₽/шт</strong> логистика
+                              </div>
                             </div>
                             <div style={{ fontSize: 18, fontWeight: 800, color: '#1A6B28' }}>{item.total} шт</div>
                           </div>
@@ -520,7 +531,7 @@ export default function Batches() {
               <select value={selectedWh} onChange={e => setSelectedWh(e.target.value)}
                 style={{ width: '100%', padding: '7px 10px', border: '1px solid rgba(74,111,82,0.25)', borderRadius: 8, fontSize: 13 }}>
                 <option value="">— Не выбран —</option>
-                {WHS.map(w => <option key={w.id} value={w.id}>{w.name} ({w.fo})</option>)}
+                {warehouses.map(w => <option key={w.id} value={w.id}>{w.name} ({w.fo})</option>)}
               </select>
             </div>
             <button onClick={createBatch}

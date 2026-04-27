@@ -2,22 +2,26 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 const fmt = x => Math.round(x).toLocaleString('ru-RU')
-const PCOL = {'Кокошник Красный':'#C0392B','Кокошник Белый':'#7F8C8D','Кокошник Черный':'#2C3E50','Кокошник Цветной':'#27AE60'}
-const PLBL = {'Кокошник Красный':'Красный','Кокошник Белый':'Белый','Кокошник Черный':'Чёрный','Кокошник Цветной':'Цветной'}
+const PCOL = {'Кокошник Красный':'#C0392B','Кокошник Белый':'#7F8C8D','Кокошник Черный':'#2C3E50','Кокошник Цветной':'#27AE60','Кокошник Ягоды':'#7D3C98','Кокошник Петушки':'#E67E22'}
+const PLBL = {'Кокошник Красный':'Красный','Кокошник Белый':'Белый','Кокошник Черный':'Чёрный','Кокошник Цветной':'Цветной','Кокошник Ягоды':'Ягоды','Кокошник Петушки':'Петушки'}
 const PRODUCTS = Object.keys(PCOL)
 
-const SEWER_MATS = ['Кожа Белая','Кожа Красная','Кожа Черная','Габардин Цветной','Резинка Черная','Резинка Белая','Регулятор Белый','Регулятор Черный','Основа пластиковая']
+const SEWER_MATS = ['Кожа Белая','Кожа Красная','Кожа Черная','Габардин Цветной','Габардин Ягоды','Габардин Петушки','Резинка Черная','Резинка Белая','Резинка Бежевая','Регулятор Белый','Регулятор Черный','Основа пластиковая','Основа пластиковая большая']
 
 const NORM = {
   'Кожа Белая':{products:['Кокошник Белый'],norm:0.0476},
   'Кожа Красная':{products:['Кокошник Красный'],norm:0.0476},
   'Кожа Черная':{products:['Кокошник Черный'],norm:0.0476},
   'Габардин Цветной':{products:['Кокошник Цветной'],norm:0.0555},
+  'Габардин Ягоды':{products:['Кокошник Ягоды'],norm:0.0555},
+  'Габардин Петушки':{products:['Кокошник Петушки'],norm:0.0650},
   'Резинка Белая':{products:['Кокошник Белый'],norm:0.2},
-  'Резинка Черная':{products:['Кокошник Красный','Кокошник Черный','Кокошник Цветной'],norm:0.2},
+  'Резинка Черная':{products:['Кокошник Красный','Кокошник Черный','Кокошник Цветной','Кокошник Петушки'],norm:0.2},
+  'Резинка Бежевая':{products:['Кокошник Ягоды'],norm:0.2},
   'Регулятор Белый':{products:['Кокошник Белый'],norm:2},
-  'Регулятор Черный':{products:['Кокошник Красный','Кокошник Черный','Кокошник Цветной'],norm:2},
-  'Основа пластиковая':{products:['Кокошник Красный','Кокошник Белый','Кокошник Черный','Кокошник Цветной'],norm:1},
+  'Регулятор Черный':{products:['Кокошник Красный','Кокошник Черный','Кокошник Цветной','Кокошник Ягоды','Кокошник Петушки'],norm:2},
+  'Основа пластиковая':{products:['Кокошник Красный','Кокошник Белый','Кокошник Черный','Кокошник Цветной','Кокошник Ягоды'],norm:1},
+  'Основа пластиковая большая':{products:['Кокошник Петушки'],norm:1},
 }
 
 export default function Production() {
@@ -34,6 +38,14 @@ export default function Production() {
   const [opProd, setOpProd] = useState('Кокошник Красный')
   const [opQtyP, setOpQtyP] = useState('')
   const [opFb, setOpFb] = useState('')
+  const [newSewerPopup, setNewSewerPopup] = useState(false)
+  const [newSewerName, setNewSewerName] = useState('')
+  const [newSewerTariff, setNewSewerTariff] = useState('')
+  const [newSewerSpeed, setNewSewerSpeed] = useState('')
+  const [newSewerEmail, setNewSewerEmail] = useState('')
+  const [newSewerFb, setNewSewerFb] = useState('')
+  const [editSpeedSewer, setEditSpeedSewer] = useState(null)
+  const [editSpeedValue, setEditSpeedValue] = useState('')
 
   useEffect(() => { loadAll() }, [])
 
@@ -95,6 +107,27 @@ export default function Production() {
     loadAll()
   }
 
+  async function addSewer() {
+    if (!newSewerName || !newSewerTariff) { setNewSewerFb('Заполните имя и тариф'); return }
+    const row = {
+      name: newSewerName.trim(),
+      tariff: parseInt(newSewerTariff) || 120,
+      weekly_capacity: parseInt(newSewerSpeed) || 0,
+      active: true,
+    }
+    if (newSewerEmail.trim()) row.email = newSewerEmail.trim()
+    const { error } = await supabase.from('sewers').insert(row)
+    if (error) { setNewSewerFb('Ошибка: ' + error.message); return }
+    setNewSewerFb('✓ Швея добавлена')
+    setTimeout(() => { setNewSewerPopup(false); setNewSewerFb(''); setNewSewerName(''); setNewSewerTariff(''); setNewSewerSpeed(''); setNewSewerEmail(''); loadAll() }, 1500)
+  }
+
+  async function updateSpeed(sewerId, speed) {
+    await supabase.from('sewers').update({ weekly_capacity: parseInt(speed) || 0 }).eq('id', sewerId)
+    setEditSpeedSewer(null)
+    loadAll()
+  }
+
   const TabBtn = ({ id, label }) => (
     <button onClick={() => setActiveTab(id)} style={{
       padding: '6px 16px', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer',
@@ -119,9 +152,15 @@ export default function Production() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1C2E26', marginBottom: 20 }}>
-        Производство / <span style={{ color: '#C4A882' }}>Швеи</span>
-      </h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1C2E26', margin: 0 }}>
+          Производство / <span style={{ color: '#C4A882' }}>Швеи</span>
+        </h1>
+        <button onClick={() => { setNewSewerPopup(true); setNewSewerFb('') }}
+          style={{ padding: '7px 16px', background: '#1C2E26', color: '#C4A882', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          + Новая швея
+        </button>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
         {[
@@ -161,7 +200,11 @@ export default function Production() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 800, fontSize: 13, color: '#F2EBE0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sw.name}</div>
-                      <div style={{ fontSize: 10, color: 'rgba(196,168,130,0.7)', whiteSpace: 'nowrap' }}>{sw.tariff} ₽/шт · {sw.weekly_capacity} шт/нед</div>
+                      <div style={{ fontSize: 10, color: 'rgba(196,168,130,0.7)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        {sw.tariff} ₽/шт · {sw.weekly_capacity} шт/нед
+                        <button onClick={() => { setEditSpeedSewer(sw); setEditSpeedValue(String(sw.weekly_capacity)) }}
+                          style={{ fontSize: 10, background: 'none', border: 'none', color: 'rgba(196,168,130,0.6)', cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}>✎</button>
+                      </div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
@@ -299,42 +342,39 @@ export default function Production() {
       {/* ПОПАП ВЕЗТИ */}
       {popup?.type === 'vezti' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setPopup(null)}>
-          <div style={{ background: '#fff', borderRadius: 16, width: 500, padding: '24px' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: '#fff', borderRadius: 16, width: 360, padding: '24px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>Везти — {popup.sewer.name}</span>
               <button onClick={() => setPopup(null)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
             </div>
             <div style={{ fontSize: 12, color: '#6A4A10', background: '#EEE4C8', padding: '8px 12px', borderRadius: 8, marginBottom: 16 }}>
-              ⓘ Расчёт на 1 неделю исходя из нормы выработки швеи ({popup.sewer.weekly_capacity} шт/нед). Колонка "Довезти" показывает сколько нужно добавить чтобы швея могла работать всю неделю без остановки.
+              ⓘ На 1 неделю ({popup.sewer.weekly_capacity} шт/нед). Показаны только материалы, которых не хватает.
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: '#F5F0E8' }}>
-                  {['Материал','Есть','Нужно на нед.','Довезти'].map(h => (
-                    <th key={h} style={{ padding: '8px 12px', textAlign: h==='Материал'?'left':'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {getSewerStocks(popup.sewer.id).map(st => {
+            {(() => {
+              const toBring = getSewerStocks(popup.sewer.id)
+                .map(st => {
                   const matName = st.materials?.name
                   const info = NORM[matName]
                   const have = st.quantity
                   const need = info ? Math.ceil(popup.sewer.weekly_capacity * info.norm) : 0
                   const bring = Math.max(0, need - have)
-                  return (
-                    <tr key={st.id}>
-                      <td style={{ padding: '8px 12px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{matName}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(have)} {st.materials?.unit}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right', color: '#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(need)} {st.materials?.unit}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: bring > 0 ? '#6A1030' : '#1A6B28' }}>
-                        {bring > 0 ? '+' + fmt(bring) + ' ' + st.materials?.unit : '✓ Достаточно'}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                  return { matName, bring, unit: st.materials?.unit }
+                })
+                .filter(x => x.bring > 0)
+              if (toBring.length === 0) return (
+                <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 14, fontWeight: 700, color: '#1A6B28' }}>✓ Всего достаточно на эту неделю</div>
+              )
+              return (
+                <div>
+                  {toBring.map((x, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '0.5px solid rgba(74,111,82,0.1)', fontSize: 13 }}>
+                      <span style={{ fontWeight: 700, color: '#1C2E26' }}>{x.matName}</span>
+                      <span style={{ fontWeight: 800, color: '#6A1030', background: '#EED4DD', padding: '2px 8px', borderRadius: 6, fontSize: 12 }}>+{fmt(x.bring)} {x.unit}</span>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
@@ -423,21 +463,84 @@ export default function Production() {
               <tbody>
                 {productions.filter(p => p.sewer_id === popup.sewer.id).map(p => (
                   <tr key={p.id}>
-                    <td style={{ padding: '8px 12px', color: '#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                    <td style={{ padding: '6px 10px', color: '#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
                       {new Date(p.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
                     </td>
-                    <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: PCOL[p.product] || '#888' }}></span>
+                    <td style={{ padding: '6px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 700 }}>
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: PCOL[p.product] || '#888', flexShrink: 0 }}></span>
                         {PLBL[p.product] || p.product}
                       </span>
                     </td>
-                    <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(p.quantity)} шт</td>
-                    <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#1A6B28', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(p.earned)} ₽</td>
+                    <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(p.quantity)} шт</td>
+                    <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 800, color: '#1A6B28', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(p.earned)} ₽</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+      {/* ПОПАП — НОВАЯ ШВЕЯ */}
+      {newSewerPopup && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setNewSewerPopup(false)}>
+          <div style={{ background: '#fff', borderRadius: 16, width: 400, padding: '24px' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>Новая швея</span>
+              <button onClick={() => setNewSewerPopup(false)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#7A6A5A', fontWeight: 700, marginBottom: 4 }}>Имя</div>
+                <input type="text" value={newSewerName} onChange={e => setNewSewerName(e.target.value)} placeholder="Иванова Мария"
+                  style={{ width: '100%', padding: '7px 10px', border: '1px solid rgba(74,111,82,0.25)', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }}/>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: '#7A6A5A', fontWeight: 700, marginBottom: 4 }}>Тариф, ₽/шт</div>
+                  <input type="number" value={newSewerTariff} onChange={e => setNewSewerTariff(e.target.value)} placeholder="120"
+                    style={{ width: '100%', padding: '7px 10px', border: '1px solid rgba(74,111,82,0.25)', borderRadius: 8, fontSize: 13 }}/>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: '#7A6A5A', fontWeight: 700, marginBottom: 4 }}>Скорость, шт/нед</div>
+                  <input type="number" value={newSewerSpeed} onChange={e => setNewSewerSpeed(e.target.value)} placeholder="50"
+                    style={{ width: '100%', padding: '7px 10px', border: '1px solid rgba(74,111,82,0.25)', borderRadius: 8, fontSize: 13 }}/>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#7A6A5A', fontWeight: 700, marginBottom: 4 }}>Email (для входа в систему)</div>
+                <input type="email" value={newSewerEmail} onChange={e => setNewSewerEmail(e.target.value)} placeholder="ivanova@example.com"
+                  style={{ width: '100%', padding: '7px 10px', border: '1px solid rgba(74,111,82,0.25)', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }}/>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button onClick={addSewer} style={{ padding: '8px 20px', background: '#1C2E26', color: '#C4A882', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                Добавить
+              </button>
+              {newSewerFb && <div style={{ fontSize: 12, color: newSewerFb.startsWith('✓') ? '#1A6B28' : '#6A1030', fontWeight: 700 }}>{newSewerFb}</div>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ПОПАП — ИЗМЕНИТЬ СКОРОСТЬ */}
+      {editSpeedSewer && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setEditSpeedSewer(null)}>
+          <div style={{ background: '#fff', borderRadius: 16, width: 320, padding: '24px' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <span style={{ fontWeight: 800, fontSize: 15, color: '#1C2E26' }}>Скорость — {editSpeedSewer.name}</span>
+              <button onClick={() => setEditSpeedSewer(null)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: '#7A6A5A', fontWeight: 700, marginBottom: 4 }}>Скорость производства, шт/нед</div>
+              <input type="number" value={editSpeedValue} onChange={e => setEditSpeedValue(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') updateSpeed(editSpeedSewer.id, editSpeedValue) }}
+                style={{ width: '100%', padding: '8px 10px', border: '1px solid rgba(74,111,82,0.25)', borderRadius: 8, fontSize: 14 }}/>
+            </div>
+            <button onClick={() => updateSpeed(editSpeedSewer.id, editSpeedValue)}
+              style={{ width: '100%', padding: '9px', background: '#1C2E26', color: '#C4A882', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              Сохранить
+            </button>
           </div>
         </div>
       )}
