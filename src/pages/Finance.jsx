@@ -564,7 +564,7 @@ export default function Finance() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
-                {['Месяц','Заказы','Выкупы','% выкупа','Выручка WB','Зарплаты','Материалы','СДЭК','Чистая прибыль'].map(h => (
+                {['Месяц','Выкупы','Выручка WB','Зарплаты','Материалы','СДЭК','Чистая прибыль'].map(h => (
                   <th key={h} style={{ padding: '9px 12px', textAlign: h === 'Месяц' ? 'left' : 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -588,9 +588,7 @@ export default function Finance() {
                 return (
                   <tr key={d.month} style={{ background: d.month === selMonth ? 'rgba(196,168,130,0.08)' : 'transparent' }}>
                     <td style={{ padding: '9px 12px', fontWeight: 700, color: '#1C2E26', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{MONTH_NAMES[d.month]}</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#5A4A3A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{mOrd > 0 ? mOrd : '—'}</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{mSold}</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#5A4A3A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{mBuyoutPct > 0 ? mBuyoutPct + '%' : '—'}</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', color: '#1A6B28', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(mRev)} ₽</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(mSalary)} ₽</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(mMat)} ₽</td>
