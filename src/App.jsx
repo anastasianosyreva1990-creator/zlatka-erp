@@ -8,6 +8,7 @@ import Purchases from './pages/Purchases'
 import Wildberries from './pages/Wildberries'
 import Finance from './pages/Finance'
 import Documents from './pages/Documents'
+import Settings from './pages/Settings'
 import Login from './pages/Login'
 import SewerDashboard from './pages/SewerDashboard'
 import * as XLSX from 'xlsx'
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { to: '/wb', label: 'Wildberries' },
   { to: '/finance', label: 'Финансы' },
   { to: '/docs', label: 'Документы' },
+  { to: '/settings', label: 'Настройки' },
 ]
 
 async function exportToExcel() {
@@ -302,6 +304,7 @@ export default function App() {
               <Route path="/wb" element={<Wildberries/>}/>
               <Route path="/finance" element={<Finance/>}/>
               <Route path="/docs" element={<Documents/>}/>
+              <Route path="/settings" element={<Settings/>}/>
             </Routes>
           </div>
         </main>

@@ -35,6 +35,8 @@ export default function Purchases() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('signals')
   const [filter, setFilter] = useState('all')
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 20
   const [newMat, setNewMat] = useState('')
   const [newQty, setNewQty] = useState('')
   const [newSum, setNewSum] = useState('')
@@ -128,6 +130,8 @@ export default function Purchases() {
     if (filter === 'delivered') return p.status === 'delivered'
     return true
   })
+  const totalPages = Math.ceil(filteredPurchases.length / PAGE_SIZE)
+  const pagedPurchases = filteredPurchases.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const criticalCount = materials.filter(m => DAILY_USE[m.name] > 0 && daysLeft(m) <= 3).length
   const warningCount = materials.filter(m => DAILY_USE[m.name] > 0 && daysLeft(m) > 3 && daysLeft(m) <= 7).length
@@ -231,7 +235,7 @@ export default function Purchases() {
               { id: 'transit', label: 'В пути' },
               { id: 'delivered', label: 'Получено' },
             ].map(f => (
-              <button key={f.id} onClick={() => setFilter(f.id)} style={{
+              <button key={f.id} onClick={() => { setFilter(f.id); setPage(1) }} style={{
                 padding: '5px 12px', borderRadius: 16, fontSize: 11, fontWeight: 700, cursor: 'pointer',
                 border: `1px solid ${filter === f.id ? '#1C2E26' : 'rgba(74,111,82,0.2)'}`,
                 background: filter === f.id ? '#1C2E26' : 'transparent',
@@ -240,28 +244,28 @@ export default function Purchases() {
             ))}
           </div>
           <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 800 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
                   {['Дата','Материал','Кол-во','Сумма','Цена/ед','Поставщик','Статус',''].map(h => (
-                    <th key={h} style={{ padding: '9px 12px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>{h}</th>
+                    <th key={h} style={{ padding: '8px 10px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filteredPurchases.map(p => {
+                {pagedPurchases.map(p => {
                   const st = STATUSES[p.status] || STATUSES['delivered']
                   return (
                     <tr key={p.id}>
-                      <td style={{ padding: '8px 12px', color: '#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '7px 10px', color: '#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
                         {p.order_date ? new Date(p.order_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: '2-digit' }) : '—'}
                       </td>
-                      <td style={{ padding: '8px 12px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{p.materials?.name}</td>
-                      <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontWeight: 700 }}>{fmt(p.quantity)} {p.materials?.unit}</td>
-                      <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontWeight: 800, color: '#1C2E26' }}>{fmt(p.total_sum)} ₽</td>
-                      <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A' }}>{fmtD(p.price_per_unit)} ₽/{p.materials?.unit}</td>
-                      <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A' }}>{p.supplier || '—'}</td>
-                      <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                      <td style={{ padding: '7px 10px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{p.materials?.name}</td>
+                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontWeight: 700, whiteSpace: 'nowrap' }}>{fmt(p.quantity)} {p.materials?.unit}</td>
+                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontWeight: 800, color: '#1C2E26', whiteSpace: 'nowrap' }}>{fmt(p.total_sum)} ₽</td>
+                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A', whiteSpace: 'nowrap' }}>{fmtD(p.price_per_unit)} ₽/{p.materials?.unit}</td>
+                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A', whiteSpace: 'nowrap' }}>{p.supplier || '—'}</td>
+                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
                         <select value={p.status} onChange={e => setStatus(p.id, e.target.value)}
                           style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, border: `1px solid ${st.color}`, background: st.bg, cursor: 'pointer', fontWeight: 700, color: st.color }}>
                           <option value="ordered">Заказано</option>
@@ -269,7 +273,7 @@ export default function Purchases() {
                           <option value="delivered">Получено</option>
                         </select>
                       </td>
-                      <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
                         <button onClick={() => deletePurchase(p.id)} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: '1px solid #EED4DD', background: '#EED4DD', color: '#6A1030', cursor: 'pointer', fontWeight: 700 }}>
                           ×
                         </button>
@@ -282,6 +286,27 @@ export default function Purchases() {
                 )}
               </tbody>
             </table>
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderTop: '1px solid rgba(196,168,130,0.15)', fontSize: 12 }}>
+                <span style={{ color: '#7A6A5A' }}>Показано {(page-1)*PAGE_SIZE+1}–{Math.min(page*PAGE_SIZE, filteredPurchases.length)} из {filteredPurchases.length}</span>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1}
+                    style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(74,111,82,0.2)', background: page===1?'#F5F5F5':'#fff', cursor: page===1?'default':'pointer', fontSize: 11, fontWeight: 700, color: page===1?'#CCC':'#4A3A2A' }}>
+                    ←
+                  </button>
+                  {Array.from({length: totalPages}, (_, i) => i+1).filter(n => Math.abs(n-page) <= 2).map(n => (
+                    <button key={n} onClick={() => setPage(n)}
+                      style={{ padding: '4px 9px', borderRadius: 6, border: `1px solid ${n===page?'#1C2E26':'rgba(74,111,82,0.2)'}`, background: n===page?'#1C2E26':'#fff', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: n===page?'#C4A882':'#4A3A2A' }}>
+                      {n}
+                    </button>
+                  ))}
+                  <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page===totalPages}
+                    style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(74,111,82,0.2)', background: page===totalPages?'#F5F5F5':'#fff', cursor: page===totalPages?'default':'pointer', fontSize: 11, fontWeight: 700, color: page===totalPages?'#CCC':'#4A3A2A' }}>
+                    →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

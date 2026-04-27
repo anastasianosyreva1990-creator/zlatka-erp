@@ -21,8 +21,11 @@ const SDEK_RATES = {
   'Невинномысск':2690,'Волгоград':1670,'Екатеринбург':934,
   'Новосемейкино':1249,'Сарапул':1459
 }
-const BUYOUT = 0.47
 const COLORS = ['Красный','Белый','Черный','Цветной']
+
+function formatPeriod(s) {
+  return 'за период ' + s.replace(/(\d{4})-(\d{2})-(\d{2})/g, (_,y,m,d)=>`${d}.${m}.${y.slice(2)}`)
+}
 
 export default function Finance() {
   const [tab, setTab] = useState('unit')
@@ -33,6 +36,7 @@ export default function Finance() {
   const [wbStocks, setWbStocks] = useState([])
   const [dbPayouts, setDbPayouts] = useState([])
   const [readyStock, setReadyStock] = useState([])
+  const [orders, setOrders] = useState([])
   const [selMonth, setSelMonth] = useState('2026-04')
   const [loading, setLoading] = useState(true)
 
@@ -40,7 +44,7 @@ export default function Finance() {
 
   async function loadAll() {
     setLoading(true)
-    const [{ data: wb }, { data: pr }, { data: sw }, { data: sh }, { data: st }, { data: py }, { data: rs }] = await Promise.all([
+    const [{ data: wb }, { data: pr }, { data: sw }, { data: sh }, { data: st }, { data: py }, { data: rs }, { data: ord }] = await Promise.all([
       supabase.from('wb_monthly').select('*').order('month'),
       supabase.from('productions').select('*, sewers(name, tariff)'),
       supabase.from('sewers').select('*'),
@@ -48,6 +52,7 @@ export default function Finance() {
       supabase.from('wb_stocks').select('*'),
       supabase.from('wb_payouts').select('*').order('payout_date'),
       supabase.from('ready_stock').select('*'),
+      supabase.from('wb_orders').select('*'),
     ])
     setWbData(wb || [])
     setProductions(pr || [])
@@ -56,6 +61,7 @@ export default function Finance() {
     setWbStocks(st || [])
     setDbPayouts(py || [])
     setReadyStock(rs || [])
+    setOrders(ord || [])
     setLoading(false)
   }
 
@@ -188,10 +194,38 @@ export default function Finance() {
     return result.sort((a, b) => a.date - b.date)
   }
 
+  function calcBuyoutRate(month) {
+    const wbd = wbData.find(d => d.month === month) || {}
+    const mSold = (wbd.sold_red||0)+(wbd.sold_white||0)+(wbd.sold_black||0)+(wbd.sold_color||0)
+    const mOrders = orders.filter(o => o.date?.startsWith(month)).reduce((a, o) => a + o.red + o.white + o.black + o.color, 0)
+    if (mOrders > 0 && mSold > 0) return mSold / mOrders
+    return 0.47
+  }
+
+  function calcSewerProfit(sw) {
+    const prods = productions.filter(p => p.date?.startsWith(selMonth) && p.sewer_id === sw.id)
+    if (!prods.length) return { revenue: 0, netProfit: 0 }
+    let revenue = 0, netProfit = 0
+    prods.forEach(p => {
+      const color = Object.entries(COLOR_PROD).find(([,prod]) => prod === p.product)?.[0]
+      if (color) {
+        const u = calcUnit(selMonth, color)
+        if (u.avgRevenue > 0) {
+          const avgTariff = calcTariffPerUnit(selMonth, p.product)
+          revenue += p.quantity * u.avgRevenue
+          netProfit += p.quantity * (u.profitPerUnit + avgTariff - sw.tariff)
+        }
+      }
+    })
+    return { revenue: Math.round(revenue), netProfit: Math.round(netProfit) }
+  }
+
   if (loading) return <div style={{ padding: 40, color: '#5A4A3A' }}>Загрузка...</div>
 
+  const BUYOUT = calcBuyoutRate(selMonth)
   const wb = wbData.find(d => d.month === selMonth) || {}
   const totalSold = (wb.sold_red||0)+(wb.sold_white||0)+(wb.sold_black||0)+(wb.sold_color||0)
+  const monthOrders = orders.filter(o => o.date?.startsWith(selMonth)).reduce((a, o) => a + o.red + o.white + o.black + o.color, 0)
   const monthProfit = COLORS.map(c => calcUnit(selMonth, c)).reduce((a, u) => a + u.totalProfit, 0)
   const payouts = buildPayouts()
 
@@ -253,13 +287,14 @@ export default function Finance() {
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
             {[
-              { label: 'Выкупов за месяц', value: fmt(totalSold) + ' шт', color: '#1C2E26' },
-              { label: 'Выручка с WB', value: fmt(wb.revenue || 0) + ' ₽', color: '#1A6B28' },
+              { label: 'Выкупов за месяц', value: fmt(totalSold) + ' шт', color: '#1C2E26', note: `выкупы / заказы = ${Math.round(BUYOUT*100)}%` },
+              { label: 'Выручка с WB', value: fmt(wb.revenue || 0) + ' ₽', color: '#1A6B28', note: 'обновляется еженедельно из отчётов WB' },
               { label: 'Прибыль за месяц', value: (monthProfit >= 0 ? '+' : '') + fmt(monthProfit) + ' ₽', color: monthProfit >= 0 ? '#1A6B28' : '#6A304A' },
             ].map((m, i) => (
               <div key={i} style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', border: '0.5px solid rgba(74,111,82,0.15)' }}>
                 <div style={{ fontSize: 10, color: '#7A6A5A', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>{m.label}</div>
                 <div style={{ fontSize: 22, fontWeight: 800, color: m.color }}>{m.value}</div>
+                {m.note && <div style={{ fontSize: 10, color: '#9A8878', marginTop: 3 }}>{m.note}</div>}
               </div>
             ))}
           </div>
@@ -331,8 +366,11 @@ export default function Finance() {
                 )
               })}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#1C2E26', borderRadius: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#F2EBE0' }}>Итого ожидаемая прибыль</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#1C2E26', borderRadius: 8 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#F2EBE0' }}>Итого ожидаемая прибыль</div>
+                <div style={{ fontSize: 10, color: 'rgba(196,168,130,0.6)', marginTop: 2 }}>чистая прибыль с учётом выкупа {Math.round(BUYOUT*100)}%</div>
+              </div>
               <span style={{ fontSize: 16, fontWeight: 800, color: '#C4A882' }}>
                 {fmt(COLORS.map(c => { const prod = COLOR_PROD[c]; const qty = wbStocks.filter(s=>s.product===prod).reduce((a,s)=>a+s.quantity,0); return Math.round(qty*BUYOUT*calcUnit(selMonth,c).profitPerUnit) }).reduce((a,b)=>a+b,0))} ₽
               </span>
@@ -348,61 +386,53 @@ export default function Finance() {
             ⓘ Заморозка = деньги вложенные в товар (материалы + зарплата) которые ещё не вернулись через продажи.
           </div>
 
-          {/* Карточки по категориям */}
-          {[
-            { key: 'myWarehouse', label: '🏠 На моём складе', sub: 'Готовые изделия ждут отгрузки' },
-            { key: 'inTransit', label: '🚚 В пути до WB', sub: 'Отгрузки со статусом "В пути"' },
-            { key: 'onWb', label: '📦 На складе WB', sub: 'Товар принят складом WB' },
-            { key: 'inWayToClient', label: '📫 В пути к клиенту', sub: 'Заказы в доставке' },
-          ].map(cat => {
-            const catTotal = Object.values(freeze[cat.key]).reduce((a,b)=>a+b,0)
-            return (
-              <div key={cat.key} style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', padding: '14px 18px', marginBottom: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#1C2E26' }}>{cat.label}</div>
-                    <div style={{ fontSize: 11, color: '#7A6A5A', marginTop: 2 }}>{cat.sub}</div>
-                  </div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: '#6A304A' }}>{fmt(catTotal)} ₽</div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+          <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'auto', marginBottom: 16 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: '#F5F0E8' }}>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Категория</th>
                   {COLORS.map(c => (
-                    <div key={c} style={{ background: '#F5F0E8', borderRadius: 8, padding: '8px 10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
-                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: COLOR_DOT[c] }}></span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#1C2E26' }}>{c}</span>
-                      </div>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: '#6A304A' }}>{fmt(freeze[cat.key][c])} ₽</div>
-                    </div>
+                    <th key={c} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: COLOR_DOT[c], display: 'inline-block' }}></span>
+                        {c}
+                      </span>
+                    </th>
                   ))}
-                </div>
-              </div>
-            )
-          })}
-
-          {/* Итого заморожено */}
-          <div style={{ background: '#1C2E26', borderRadius: 12, padding: '16px 20px', marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: 'rgba(196,168,130,0.7)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
-              Итого заморожено в бизнесе
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 14 }}>
-              {[
-                { label: 'Мой склад', value: freezeTotal.myWarehouse },
-                { label: 'В пути до WB', value: freezeTotal.inTransit },
-                { label: 'На складе WB', value: freezeTotal.onWb },
-                { label: 'К клиенту', value: freezeTotal.inWayToClient },
-              ].map((item, i) => (
-                <div key={i} style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '10px 12px' }}>
-                  <div style={{ fontSize: 10, color: 'rgba(196,168,130,0.6)', fontWeight: 700, marginBottom: 4 }}>{item.label}</div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#C4A882' }}>{fmt(item.value)} ₽</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: '1px solid rgba(196,168,130,0.2)' }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#F2EBE0' }}>Всего заморожено</span>
-              <span style={{ fontSize: 24, fontWeight: 800, color: '#C4A882' }}>{fmt(grandTotal)} ₽</span>
-            </div>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Итого</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { key: 'myWarehouse', label: '🏠 Мой склад' },
+                  { key: 'inTransit', label: '🚚 В пути до WB' },
+                  { key: 'onWb', label: '📦 На складе WB' },
+                  { key: 'inWayToClient', label: '📫 К клиенту' },
+                ].map((cat, ri) => {
+                  const catTotal = Object.values(freeze[cat.key]).reduce((a,b)=>a+b,0)
+                  return (
+                    <tr key={cat.key} style={{ background: ri % 2 === 0 ? '#FAFAF8' : '#fff' }}>
+                      <td style={{ padding: '10px 14px', fontWeight: 700, color: '#1C2E26', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{cat.label}</td>
+                      {COLORS.map(c => (
+                        <td key={c} style={{ padding: '10px 12px', textAlign: 'right', color: '#6A304A', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(freeze[cat.key][c])} ₽</td>
+                      ))}
+                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(catTotal)} ₽</td>
+                    </tr>
+                  )
+                })}
+                <tr style={{ background: '#F5F0E8', fontWeight: 800 }}>
+                  <td style={{ padding: '10px 14px', fontWeight: 800, color: '#1C2E26', borderTop: '1px solid rgba(196,168,130,0.2)' }}>Итого</td>
+                  {COLORS.map(c => (
+                    <td key={c} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#1C2E26', borderTop: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>
+                      {fmt(Object.values(freeze).reduce((a,cat)=>a+(cat[c]||0),0))} ₽
+                    </td>
+                  ))}
+                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#C4A882', borderTop: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', fontSize: 14 }}>{fmt(grandTotal)} ₽</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+
 
           {/* Прогноз если продать всё */}
           <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', padding: '16px 18px' }}>
@@ -461,18 +491,18 @@ export default function Finance() {
             </div>
             <div style={{ padding: '8px 0' }}>
               {payouts.map((p, i) => {
-                const dateStr = p.date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+                const dateStr = p.date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ' ' + p.date.getFullYear()
                 const isFact = p.type === 'fact'
                 const isPast = p.date < new Date()
                 return (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 18px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', opacity: isPast ? 0.6 : 1 }}>
                     <div style={{ width: 10, height: 10, borderRadius: '50%', background: isFact ? '#1A6B28' : '#C4A882', flexShrink: 0 }}></div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1C2E26' }}>{dateStr}</div>
-                      <div style={{ fontSize: 11, color: '#7A6A5A', marginTop: 1 }}>{p.period}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1C2E26', whiteSpace: 'nowrap' }}>{dateStr}</div>
+                      <div style={{ fontSize: 10, color: '#9A8878', marginTop: 2 }}>{formatPeriod(p.period)}</div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: '#1A6B28' }}>+{fmt(p.amount)} ₽</div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: '#1A6B28', whiteSpace: 'nowrap' }}>+{fmt(p.amount)} ₽</div>
                       <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 6, fontWeight: 700,
                         background: isFact ? '#D8EED8' : '#EEE4C8',
                         color: isFact ? '#1A4A28' : '#6A4A10' }}>
@@ -489,15 +519,15 @@ export default function Finance() {
 
       {/* ЗАРПЛАТЫ */}
       {tab === 'salary' && (
-        <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'hidden' }}>
+        <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'auto' }}>
           <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(196,168,130,0.2)', fontWeight: 700, fontSize: 14, color: '#1C2E26' }}>
             Зарплаты швей — {MONTH_NAMES[selMonth]}
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
-                {['Швея','Тариф','Сдано','Начислено'].map(h => (
-                  <th key={h} style={{ padding: '10px 14px', textAlign: h === 'Швея' ? 'left' : 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>{h}</th>
+                {['Швея','Тариф','Сдано','Начислено','Выручка WB','Чистая прибыль'].map(h => (
+                  <th key={h} style={{ padding: '9px 12px', textAlign: h === 'Швея' ? 'left' : 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -506,12 +536,17 @@ export default function Finance() {
                 const prods = productions.filter(p => p.date?.startsWith(selMonth) && p.sewer_id === sw.id)
                 const qty = prods.reduce((a, p) => a + p.quantity, 0)
                 const earned = qty * sw.tariff
+                const { revenue, netProfit } = calcSewerProfit(sw)
                 return (
                   <tr key={sw.id}>
-                    <td style={{ padding: '10px 14px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{sw.name}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{sw.tariff} ₽/шт</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(qty)} шт</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, color: '#1A6B28', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(earned)} ₽</td>
+                    <td style={{ padding: '9px 12px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{sw.name}</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{sw.tariff} ₽/шт</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(qty)} шт</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(earned)} ₽</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#1A6B28', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{revenue > 0 ? fmt(revenue) + ' ₽' : '—'}</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: netProfit >= 0 ? '#1A6B28' : '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                      {revenue > 0 ? (netProfit >= 0 ? '+' : '') + fmt(netProfit) + ' ₽' : '—'}
+                    </td>
                   </tr>
                 )
               })}
@@ -526,11 +561,11 @@ export default function Finance() {
           <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(196,168,130,0.2)', fontWeight: 700, fontSize: 14, color: '#1C2E26' }}>
             История по месяцам
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 700 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
-                {['Месяц','Выкупов','Выручка WB','Логистика','Зарплаты','Материалы','СДЭК','Налог','Прибыль'].map(h => (
-                  <th key={h} style={{ padding: '10px 14px', textAlign: h === 'Месяц' ? 'left' : 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>{h}</th>
+                {['Месяц','Заказы','Выкупы','% выкупа','Выручка WB','Зарплаты','Материалы','СДЭК','Чистая прибыль'].map(h => (
+                  <th key={h} style={{ padding: '9px 12px', textAlign: h === 'Месяц' ? 'left' : 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -547,19 +582,21 @@ export default function Finance() {
                 const mLog = (d.log_sale||0)+(d.log_cancel||0)
                 const mNalog = Math.round(mRev * 0.06)
                 const mSold = (d.sold_red||0)+(d.sold_white||0)+(d.sold_black||0)+(d.sold_color||0)
+                const mOrd = orders.filter(o => o.date?.startsWith(d.month)).reduce((a, o) => a + o.red + o.white + o.black + o.color, 0)
+                const mBuyoutPct = mOrd > 0 ? Math.round(mSold / mOrd * 100) : 0
                 const mProfit = mRev - mLog - (d.vv||0) - mSalary - mMat - mSdek - mNalog
                 return (
                   <tr key={d.month} style={{ background: d.month === selMonth ? 'rgba(196,168,130,0.08)' : 'transparent' }}>
-                    <td style={{ padding: '10px 14px', fontWeight: 700, color: '#1C2E26', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{MONTH_NAMES[d.month]}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{mSold}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#1A6B28', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(mRev)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(mLog)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(mSalary)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(mMat)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(mSdek)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(mNalog)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, color: mProfit >= 0 ? '#1A6B28' : '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
-                      {mProfit >= 0 ? '+' : ''}{fmt(mProfit)}
+                    <td style={{ padding: '9px 12px', fontWeight: 700, color: '#1C2E26', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{MONTH_NAMES[d.month]}</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#5A4A3A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{mOrd > 0 ? mOrd : '—'}</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{mSold}</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#5A4A3A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{mBuyoutPct > 0 ? mBuyoutPct + '%' : '—'}</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#1A6B28', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(mRev)} ₽</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(mSalary)} ₽</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(mMat)} ₽</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(mSdek)} ₽</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: mProfit >= 0 ? '#1A6B28' : '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                      {mProfit >= 0 ? '+' : ''}{fmt(mProfit)} ₽
                     </td>
                   </tr>
                 )
