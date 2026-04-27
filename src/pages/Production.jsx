@@ -191,7 +191,7 @@ export default function Production() {
             const monthEarned = monthQty * sw.tariff
 
             return (
-              <div key={sw.id} style={{ background: '#fff', borderRadius: 14, border: '0.5px solid rgba(74,111,82,0.2)', overflow: 'hidden', boxShadow: '0 1px 4px rgba(28,46,38,0.06)' }}>
+              <div key={sw.id} style={{ background: '#fff', borderRadius: 14, border: '0.5px solid rgba(74,111,82,0.2)', overflowX: 'auto', boxShadow: '0 1px 4px rgba(28,46,38,0.06)' }}>
                 {/* Шапка */}
                 <div style={{ background: '#1C2E26', padding: '10px 14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -199,7 +199,7 @@ export default function Production() {
                       {sw.name.split(' ').map(w => w[0]).join('')}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 800, fontSize: 13, color: '#F2EBE0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sw.name}</div>
+                      <div style={{ fontWeight: 800, fontSize: 13, color: '#F2EBE0', whiteSpace: 'nowrap', overflowX: 'auto', textOverflow: 'ellipsis' }}>{sw.name}</div>
                       <div style={{ fontSize: 10, color: 'rgba(196,168,130,0.7)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
                         {sw.tariff} ₽/шт · {sw.weekly_capacity} шт/нед
                         <button onClick={() => { setEditSpeedSewer(sw); setEditSpeedValue(String(sw.weekly_capacity)) }}
@@ -241,7 +241,7 @@ export default function Production() {
                     const need = info ? Math.max(0, Math.ceil(sw.weekly_capacity * info.norm - have)) : 0
                     return (
                       <div key={st.id} style={{ display: 'grid', gridTemplateColumns: '1fr 55px 45px 60px', gap: 4, padding: '4px 0', borderBottom: '0.5px solid rgba(74,111,82,0.06)', fontSize: 11, alignItems: 'center' }}>
-                        <span style={{ color: '#1C2E26', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{matName}</span>
+                        <span style={{ color: '#1C2E26', fontWeight: 600, overflowX: 'auto', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{matName}</span>
                         <span style={{ textAlign: 'right', color: '#3A2A1A', fontWeight: 700 }}>{fmt(have)} {st.materials?.unit}</span>
                         <span style={{ textAlign: 'right', color: '#7A6A5A', fontSize: 10 }}>{fmt(output)}</span>
                         <span style={{ textAlign: 'right' }}>
@@ -273,16 +273,16 @@ export default function Production() {
       )}
 
       {activeTab === 'stock' && (
-        <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'auto' }}>
-          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 13 }}>
+        <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflowX: 'auto' }}>
+          <table style={{ borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
-                <th style={{ width: 170, padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Материал</th>
-                <th style={{ width: 100, padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>На складе</th>
+                <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Материал</th>
+                <th style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>На складе</th>
                 {sewers.map(sw => (
-                  <th key={sw.id} style={{ width: 100, padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{sw.name}</th>
+                  <th key={sw.id} style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{sw.name}</th>
                 ))}
-                <th style={{ width: 100, padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Итого</th>
+                <th style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Итого</th>
               </tr>
             </thead>
             <tbody>
@@ -308,15 +308,15 @@ export default function Production() {
       )}
 
       {activeTab === 'history' && (
-        <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'auto' }}>
-          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 13 }}>
+        <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflowX: 'auto' }}>
+          <table style={{ borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
-                <th style={{ width: 80, padding:'10px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Дата</th>
-                <th style={{ width: 140, padding:'10px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Швея</th>
-                <th style={{ width: 160, padding:'10px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Изделие</th>
-                <th style={{ width: 80, padding:'10px 14px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Кол-во</th>
-                <th style={{ width: 100, padding:'10px 14px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Начислено</th>
+                <th style={{ padding:'10px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Дата</th>
+                <th style={{ padding:'10px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Швея</th>
+                <th style={{ padding:'10px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Изделие</th>
+                <th style={{ padding:'10px 14px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Кол-во</th>
+                <th style={{ padding:'10px 14px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Начислено</th>
               </tr>
             </thead>
             <tbody>
@@ -344,7 +344,7 @@ export default function Production() {
       {/* ПОПАП ВЕЗТИ */}
       {popup?.type === 'vezti' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setPopup(null)}>
-          <div style={{ background: '#fff', borderRadius: 16, width: 320, padding: '20px 24px' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '20px 24px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <span style={{ fontSize: 11, color: '#7A6A5A', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Везти — на неделю ({popup.sewer.weekly_capacity} шт)</span>
               <button onClick={() => setPopup(null)} style={{ fontSize: 18, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A', lineHeight: 1 }}>×</button>
@@ -381,7 +381,7 @@ export default function Production() {
       {/* ПОПАП ОПЕРАЦИЯ */}
       {popup?.type === 'op' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setPopup(null)}>
-          <div style={{ background: '#fff', borderRadius: 16, width: 480, padding: '24px' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '24px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>Операция — {popup.sewer.name}</span>
               <button onClick={() => setPopup(null)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
@@ -446,16 +446,16 @@ export default function Production() {
       {/* ПОПАП ИСТОРИЯ СДАЧ */}
       {popup?.type === 'history' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setPopup(null)}>
-          <div style={{ background: '#fff', borderRadius: 16, width: 560, maxHeight: '80vh', overflow: 'auto', padding: '24px' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: '#fff', borderRadius: 16, width: 560, maxHeight: '80vh', overflowX: 'auto', padding: '24px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>История сдач — {popup.sewer.name}</span>
               <button onClick={() => setPopup(null)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <table style={{ borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
                   {['Дата','Изделие','Кол-во','Начислено'].map(h => (
-                    <th key={h} style={{ padding: '8px 12px', textAlign: h==='Кол-во'||h==='Начислено'?'right':'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', width: '1%', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} style={{ padding: '8px 12px', textAlign: h==='Кол-во'||h==='Начислено'?'right':'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -483,7 +483,7 @@ export default function Production() {
       {/* ПОПАП — НОВАЯ ШВЕЯ */}
       {newSewerPopup && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setNewSewerPopup(false)}>
-          <div style={{ background: '#fff', borderRadius: 16, width: 400, padding: '24px' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '24px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>Новая швея</span>
               <button onClick={() => setNewSewerPopup(false)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
@@ -525,7 +525,7 @@ export default function Production() {
       {/* ПОПАП — ИЗМЕНИТЬ СКОРОСТЬ */}
       {editSpeedSewer && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setEditSpeedSewer(null)}>
-          <div style={{ background: '#fff', borderRadius: 16, width: 320, padding: '24px' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '24px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <span style={{ fontWeight: 800, fontSize: 15, color: '#1C2E26' }}>Скорость — {editSpeedSewer.name}</span>
               <button onClick={() => setEditSpeedSewer(null)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>

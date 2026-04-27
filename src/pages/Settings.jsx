@@ -367,16 +367,16 @@ export default function Settings() {
             </div>
           </div>
 
-          <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'auto' }}>
-            <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 13 }}>
+          <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflowX: 'auto' }}>
+            <table style={{ borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
-                  <th style={{ width: 150, padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Склад WB</th>
-                  <th style={{ width: 110, padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>ФО</th>
-                  <th style={{ width: 160, padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Доставка до клиента, ₽/шт</th>
-                  <th style={{ width: 130, padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>СДЭК, ₽/партию</th>
-                  <th style={{ width: 80, padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>СДЭК/шт</th>
-                  <th style={{ width: 110, padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}></th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Склад WB</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>ФО</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Доставка до клиента, ₽/шт</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>СДЭК, ₽/партию</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>СДЭК/шт</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -508,15 +508,15 @@ export default function Settings() {
                 </div>
               </div>
 
-              <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'auto' }}>
-                <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 13 }}>
+              <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflowX: 'auto' }}>
+                <table style={{ borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
                   <thead>
                     <tr style={{ background: '#F5F0E8' }}>
-                      <th style={{ width: 50, padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Цвет</th>
-                      <th style={{ width: 200, padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Название</th>
-                      <th style={{ width: 90, padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Метка</th>
-                      <th style={{ width: 110, padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>nmId WB</th>
-                      <th style={{ width: 80, padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}></th>
+                      <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Цвет</th>
+                      <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Название</th>
+                      <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Метка</th>
+                      <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>nmId WB</th>
+                      <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -622,7 +622,7 @@ export default function Settings() {
               </div>
 
               {selectedProduct && (
-                <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'auto' }}>
+                <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflowX: 'auto' }}>
                   <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(196,168,130,0.2)', display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ width:14, height:14, borderRadius:'50%', background:selectedProduct.color_hex||'#888', display:'inline-block' }}></span>
                     <span style={{ fontWeight:800, fontSize:14, color:'#1C2E26' }}>
@@ -632,13 +632,13 @@ export default function Settings() {
                       {productNorms.filter(n => n.norm > 0).length} материалов задано
                     </span>
                   </div>
-                  <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <table style={{ borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
                     <thead>
                       <tr style={{ background: '#F5F0E8' }}>
-                        <th style={{ width: 200, padding:'9px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Материал</th>
-                        <th style={{ width: 60, padding:'9px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Ед.</th>
-                        <th style={{ width: 130, padding:'9px 10px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Норма на 1 шт</th>
-                        <th style={{ width: 120, padding:'9px 14px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Выход из 1 ед.</th>
+                        <th style={{ padding:'9px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Материал</th>
+                        <th style={{ padding:'9px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Ед.</th>
+                        <th style={{ padding:'9px 10px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Норма на 1 шт</th>
+                        <th style={{ padding:'9px 14px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Выход из 1 ед.</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -697,7 +697,7 @@ export default function Settings() {
       {/* ПОПАП — НОВЫЙ СКЛАД */}
       {newWh && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }} onClick={()=>setNewWh(false)}>
-          <div style={{ background:'#fff', borderRadius:16, width:440, padding:'24px' }} onClick={e=>e.stopPropagation()}>
+          <div style={{ background:'#fff', borderRadius:16, padding:'24px' }} onClick={e=>e.stopPropagation()}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
               <span style={{ fontWeight:800, fontSize:16, color:'#1C2E26' }}>Добавить склад WB</span>
               <button onClick={()=>setNewWh(false)} style={{ fontSize:20, background:'none', border:'none', cursor:'pointer', color:'#7A6A5A' }}>×</button>
@@ -734,7 +734,7 @@ export default function Settings() {
       {/* ПОПАП — НОВЫЙ АРТИКУЛ */}
       {newProd && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }} onClick={()=>setNewProd(false)}>
-          <div style={{ background:'#fff', borderRadius:16, width:460, padding:'24px' }} onClick={e=>e.stopPropagation()}>
+          <div style={{ background:'#fff', borderRadius:16, padding:'24px' }} onClick={e=>e.stopPropagation()}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
               <span style={{ fontWeight:800, fontSize:16, color:'#1C2E26' }}>Новый артикул</span>
               <button onClick={()=>setNewProd(false)} style={{ fontSize:20, background:'none', border:'none', cursor:'pointer', color:'#7A6A5A' }}>×</button>

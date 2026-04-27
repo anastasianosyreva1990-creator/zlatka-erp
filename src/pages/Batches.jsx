@@ -306,8 +306,8 @@ export default function Batches() {
       </div>
 
       {/* Таблица партий */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflow: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 800 }}>
+      <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid rgba(74,111,82,0.15)', overflowX: 'auto' }}>
+        <table style={{ borderCollapse: 'collapse', fontSize: 12, whiteSpace: 'nowrap' }}>
           <thead>
             <tr style={{ background: '#F5F0E8' }}>
               {['#','Дата','Размер','Состав','Склад WB','Себес/шт','Статус',''].map(h => (
@@ -368,7 +368,7 @@ export default function Batches() {
       {/* ПОПАП — РЕДАКТИРОВАТЬ СКЛАД */}
       {editStockPopup && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setEditStockPopup(false)}>
-          <div style={{ background: '#fff', borderRadius: 16, width: 400, padding: '24px' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '24px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>Редактировать склад готовых</span>
               <button onClick={() => setEditStockPopup(false)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
@@ -395,7 +395,7 @@ export default function Batches() {
       {/* ПОПАП — РЕКОМЕНДАЦИЯ */}
       {recPopup && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setRecPopup(false)}>
-          <div style={{ background: '#fff', borderRadius: 16, width: 580, maxHeight: '85vh', overflow: 'auto', padding: '24px' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: '#fff', borderRadius: 16, width: 580, maxHeight: '85vh', overflowX: 'auto', padding: '24px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>💡 Рекомендация</span>
               <button onClick={() => setRecPopup(false)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
@@ -488,7 +488,7 @@ export default function Batches() {
       {/* ПОПАП — НОВАЯ ПАРТИЯ */}
       {newPopup && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setNewPopup(false)}>
-          <div style={{ background: '#fff', borderRadius: 16, width: 500, padding: '24px', maxHeight: '85vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '24px', maxHeight: '85vh', overflowX: 'auto' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>Новая партия</span>
               <button onClick={() => setNewPopup(false)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
@@ -546,12 +546,12 @@ export default function Batches() {
       {/* ПОПАП — ДЕТАЛИ */}
       {detailPopup && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setDetailPopup(null)}>
-          <div style={{ background: '#fff', borderRadius: 16, width: 500, maxHeight: '80vh', overflow: 'auto', padding: '24px' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: '#fff', borderRadius: 16, width: 500, maxHeight: '80vh', overflowX: 'auto', padding: '24px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <span style={{ fontWeight: 800, fontSize: 16, color: '#1C2E26' }}>Партия #{detailPopup.batch_num} — детали</span>
               <button onClick={() => setDetailPopup(null)} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: '#7A6A5A' }}>×</button>
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 14 }}>
+            <table style={{ borderCollapse: 'collapse', fontSize: 13, marginBottom: 14, whiteSpace: 'nowrap' }}>
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
                   {['Изделие','Кол-во'].map(h => (

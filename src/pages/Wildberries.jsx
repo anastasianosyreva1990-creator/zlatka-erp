@@ -304,7 +304,7 @@ export default function Wildberries(){
                   const lc=Math.round(logCost(wh))
                   const borderColor=hasCrit?'#6A1030':hasWarn?'#6A4A10':'rgba(74,111,82,0.2)'
                   return (
-                    <div key={wh.id} style={{background:'#fff',border:`1px solid ${borderColor}`,borderRadius:12,overflow:'hidden'}}>
+                    <div key={wh.id} style={{background:'#fff',border:`1px solid ${borderColor}`,borderRadius:12,overflowX:'auto'}}>
                       <div style={{background:'#1C2E26',padding:'10px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                         <div>
                           <div style={{fontWeight:800,fontSize:13,color:'#F2EBE0'}}>{hasCrit?'⚠ ':''}{wh.name}</div>
@@ -418,8 +418,8 @@ export default function Wildberries(){
             ))}
           </div>
 
-          <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',overflow:'auto'}}>
-            <table style={{borderCollapse:'collapse',fontSize:11,minWidth:900}}>
+          <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',overflowX:'auto'}}>
+            <table style={{ borderCollapse:'collapse',fontSize:11, whiteSpace: 'nowrap' }}>
               <thead>
                 <tr style={{background:'#1C2E26'}}>
                   <th style={{padding:'8px 10px',textAlign:'left',color:'#C4A882',fontWeight:700,fontSize:11,position:'sticky',left:0,background:'#1C2E26',minWidth:80}}>Цвет</th>
@@ -546,8 +546,8 @@ export default function Wildberries(){
             </div>
           </div>
 
-          <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',overflow:'auto'}}>
-            <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,minWidth:800}}>
+          <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',overflowX:'auto'}}>
+            <table style={{ borderCollapse:'collapse',fontSize:12, whiteSpace: 'nowrap' }}>
               <thead>
                 <tr style={{background:'#F5F0E8'}}>
                   {['Дата','Тип','Кол-во','Направление','ТК','№ Накладной','№ Поставки WB','Приход WB','Статус',''].map(h=>(
@@ -636,7 +636,7 @@ export default function Wildberries(){
       {/* ПОПАП — РЕДАКТИРОВАТЬ ОТГРУЗКУ */}
       {editShip&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}} onClick={()=>setEditShip(null)}>
-          <div style={{background:'#fff',borderRadius:16,width:520,padding:'24px',maxHeight:'90vh',overflow:'auto'}} onClick={e=>e.stopPropagation()}>
+          <div style={{background:'#fff',borderRadius:16, padding:'24px',maxHeight:'90vh',overflowX:'auto'}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
               <span style={{fontWeight:800,fontSize:16,color:'#1C2E26'}}>Редактировать отгрузку</span>
               <button onClick={()=>setEditShip(null)} style={{fontSize:20,background:'none',border:'none',cursor:'pointer',color:'#7A6A5A'}}>×</button>
