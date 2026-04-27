@@ -410,7 +410,7 @@ export default function Finance() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
-                  <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>Категория</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Категория</th>
                   {COLORS.map(c => (
                     <th key={c} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -434,20 +434,20 @@ export default function Finance() {
                     <tr key={cat.key} style={{ background: ri % 2 === 0 ? '#FAFAF8' : '#fff' }}>
                       <td style={{ padding: '10px 14px', fontWeight: 700, color: '#1C2E26', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{cat.label}</td>
                       {COLORS.map(c => (
-                        <td key={c} style={{ padding: '10px 12px', textAlign: 'right', color: '#6A304A', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(freeze[cat.key][c])} ₽</td>
+                        <td key={c} style={{ padding: '10px 12px', textAlign: 'right', color: '#6A304A', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{fmt(freeze[cat.key][c])} ₽</td>
                       ))}
-                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(catTotal)} ₽</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{fmt(catTotal)} ₽</td>
                     </tr>
                   )
                 })}
                 <tr style={{ background: '#F5F0E8', fontWeight: 800 }}>
-                  <td style={{ padding: '10px 14px', fontWeight: 800, color: '#1C2E26', borderTop: '1px solid rgba(196,168,130,0.2)' }}>Итого</td>
+                  <td style={{ padding: '10px 14px', fontWeight: 800, color: '#1C2E26', borderTop: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Итого</td>
                   {COLORS.map(c => (
-                    <td key={c} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#1C2E26', borderTop: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>
+                    <td key={c} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#1C2E26', borderTop: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>
                       {fmt(Object.values(freeze).reduce((a,cat)=>a+(cat[c]||0),0))} ₽
                     </td>
                   ))}
-                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#C4A882', borderTop: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', fontSize: 14 }}>{fmt(grandTotal)} ₽</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#C4A882', borderTop: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%', fontSize: 14 }}>{fmt(grandTotal)} ₽</td>
                 </tr>
               </tbody>
             </table>
@@ -549,9 +549,10 @@ export default function Finance() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
-                {['Швея','Тариф','Сдано','Начислено'].map(h => (
-                  <th key={h} style={{ padding: '9px 12px', textAlign: h === 'Швея' ? 'left' : 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
-                ))}
+                    <th style={{ padding: '9px 12px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Швея</th>
+                  {['Тариф','Сдано','Начислено'].map(h => (
+                    <th key={h} style={{ padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>{h}</th>
+                  ))}
               </tr>
             </thead>
             <tbody>
@@ -562,9 +563,9 @@ export default function Finance() {
                 return (
                   <tr key={sw.id}>
                     <td style={{ padding: '9px 12px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{sw.name}</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{sw.tariff} ₽/шт</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(qty)} шт</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(earned)} ₽</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{sw.tariff} ₽/шт</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{fmt(qty)} шт</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{fmt(earned)} ₽</td>
                   </tr>
                 )
               })}
@@ -576,10 +577,10 @@ export default function Finance() {
                 }, 0)
                 return (
                   <tr style={{ background: '#F5F0E8', fontWeight: 800 }}>
-                    <td style={{ padding: '9px 12px', fontWeight: 800, color: '#1C2E26', borderTop: '1px solid rgba(196,168,130,0.2)' }}>Итого</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', borderTop: '1px solid rgba(196,168,130,0.2)', color: '#7A6A5A' }}>—</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, borderTop: '1px solid rgba(196,168,130,0.2)' }}>{fmt(totQty)} шт</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: '#6A304A', borderTop: '1px solid rgba(196,168,130,0.2)' }}>{fmt(totEarned)} ₽</td>
+                    <td style={{ padding: '9px 12px', fontWeight: 800, color: '#1C2E26', borderTop: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Итого</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', borderTop: '1px solid rgba(196,168,130,0.2)', color: '#7A6A5A', whiteSpace: 'nowrap', width: '1%' }}>—</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, borderTop: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>{fmt(totQty)} шт</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: '#6A304A', borderTop: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>{fmt(totEarned)} ₽</td>
                   </tr>
                 )
               })()}
@@ -597,9 +598,10 @@ export default function Finance() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
-                {['Месяц','Выкупы','Выручка WB','Зарплаты','Материалы','СДЭК','Чистая прибыль'].map(h => (
-                  <th key={h} style={{ padding: '9px 12px', textAlign: h === 'Месяц' ? 'left' : 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
-                ))}
+                    <th style={{ padding: '9px 12px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Месяц</th>
+                  {['Выкупы','Выручка WB','Зарплаты','Материалы','СДЭК','Чистая прибыль'].map(h => (
+                    <th key={h} style={{ padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>{h}</th>
+                  ))}
               </tr>
             </thead>
             <tbody>
@@ -621,12 +623,12 @@ export default function Finance() {
                 return (
                   <tr key={d.month} style={{ background: d.month === selMonth ? 'rgba(196,168,130,0.08)' : 'transparent' }}>
                     <td style={{ padding: '9px 12px', fontWeight: 700, color: '#1C2E26', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{MONTH_NAMES[d.month]}</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{mSold}</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#1A6B28', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(mRev)} ₽</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(mSalary)} ₽</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(mMat)} ₽</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(mSdek)} ₽</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: mProfit >= 0 ? '#1A6B28' : '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{mSold}</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#1A6B28', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{fmt(mRev)} ₽</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{fmt(mSalary)} ₽</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{fmt(mMat)} ₽</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{fmt(mSdek)} ₽</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: mProfit >= 0 ? '#1A6B28' : '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                       {mProfit >= 0 ? '+' : ''}{fmt(mProfit)} ₽
                     </td>
                   </tr>

@@ -174,8 +174,9 @@ export default function Purchases() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                     <thead>
                       <tr style={{ background: '#F5F0E8' }}>
-                        {['Материал','На складе','В пути','Расход/день','Дней запаса','','Заказать'].map(h => (
-                          <th key={h} style={{ padding: '8px 12px', textAlign: h === 'Материал' ? 'left' : 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>{h}</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Материал</th>
+                        {['На складе','В пути','Расход/день','Дней запаса','','Заказать'].map(h => (
+                          <th key={h} style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -192,24 +193,24 @@ export default function Purchases() {
                         return (
                           <tr key={mat.id}>
                             <td style={{ padding: '8px 12px', fontWeight: 700, color: '#1C2E26', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{mat.name}</td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontWeight: 700, whiteSpace: 'nowrap' }}>{fmt(stock)} {mat.unit}</td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: transit > 0 ? '#185FA5' : '#D5CEC5', fontWeight: transit > 0 ? 700 : 400, whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontWeight: 700, whiteSpace: 'nowrap', width: '1%' }}>{fmt(stock)} {mat.unit}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: transit > 0 ? '#185FA5' : '#D5CEC5', fontWeight: transit > 0 ? 700 : 400, whiteSpace: 'nowrap', width: '1%' }}>
                               {transit > 0 ? `${fmt(transit)} ${mat.unit}` : '—'}
                             </td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A', whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A', whiteSpace: 'nowrap', width: '1%' }}>
                               {daily > 0 ? `${daily.toFixed(2)} ${mat.unit}` : '—'}
                             </td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                               <span style={{ fontSize: 12, fontWeight: 800, color: dayColor, background: dayBg, padding: '2px 8px', borderRadius: 6 }}>
                                 {daily <= 0 ? '—' : days > 99 ? '∞' : `${days} дн`}
                               </span>
                             </td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                               {daily <= 0 ? '' : days <= 3 ? <span style={{ fontSize: 10, fontWeight: 800, color: '#6A1030' }}>🔴 Срочно</span>
                                 : days <= 7 ? <span style={{ fontSize: 10, fontWeight: 800, color: '#6A4A10' }}>🟡 Скоро</span>
                                 : <span style={{ fontSize: 10, fontWeight: 700, color: '#1A6B28' }}>🟢 Норма</span>}
                             </td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                               {need > 0
                                 ? <span style={{ fontSize: 11, fontWeight: 800, color: days <= 3 ? '#6A1030' : '#6A4A10' }}>+{fmt(need)} {mat.unit}</span>
                                 : <span style={{ fontSize: 11, color: '#D5CEC5' }}>—</span>}
@@ -247,13 +248,14 @@ export default function Purchases() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
-                  {[
-                    {l:'Дата', tight:true}, {l:'Материал'}, {l:'Кол-во', tight:true, right:true},
-                    {l:'Сумма', tight:true, right:true}, {l:'Цена/ед', tight:true, right:true},
-                    {l:'Поставщик'}, {l:'Статус'}, {l:'', tight:true},
-                  ].map(h => (
-                    <th key={h.l} style={{ padding:'8px 10px', textAlign:h.right?'right':'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:h.tight?'1%':'auto' }}>{h.l}</th>
+                  <th style={{ padding:'8px 10px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:'1%' }}>Дата</th>
+                  <th style={{ padding:'8px 10px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Материал</th>
+                  {['Кол-во','Сумма','Цена/ед'].map(h => (
+                    <th key={h} style={{ padding:'8px 10px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:'1%' }}>{h}</th>
                   ))}
+                  <th style={{ padding:'8px 10px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:'1%' }}>Поставщик</th>
+                  <th style={{ padding:'8px 10px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:'1%' }}>Статус</th>
+                  <th style={{ padding:'8px 10px', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:'1%' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -261,23 +263,23 @@ export default function Purchases() {
                   const st = STATUSES[p.status] || STATUSES['delivered']
                   return (
                     <tr key={p.id}>
-                      <td style={{ padding: '7px 10px', color: '#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '7px 10px', color: '#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                         {p.order_date ? new Date(p.order_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: '2-digit' }) : '—'}
                       </td>
                       <td style={{ padding: '7px 10px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{p.materials?.name}</td>
-                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontWeight: 700, whiteSpace: 'nowrap' }}>{fmt(p.quantity)} {p.materials?.unit}</td>
-                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontWeight: 800, color: '#1C2E26', whiteSpace: 'nowrap' }}>{fmt(p.total_sum)} ₽</td>
-                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A', whiteSpace: 'nowrap' }}>{fmtD(p.price_per_unit)} ₽</td>
-                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A', whiteSpace: 'nowrap' }}>{p.supplier || '—'}</td>
-                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', minWidth: 110 }}>
+                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontWeight: 700, whiteSpace: 'nowrap', width: '1%', textAlign: 'right' }}>{fmt(p.quantity)} {p.materials?.unit}</td>
+                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontWeight: 800, color: '#1C2E26', whiteSpace: 'nowrap', width: '1%', textAlign: 'right' }}>{fmt(p.total_sum)} ₽</td>
+                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A', whiteSpace: 'nowrap', width: '1%', textAlign: 'right' }}>{fmtD(p.price_per_unit)} ₽</td>
+                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A', whiteSpace: 'nowrap', width: '1%' }}>{p.supplier || '—'}</td>
+                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                         <select value={p.status} onChange={e => setStatus(p.id, e.target.value)}
-                          style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: `1px solid ${st.color}`, background: st.bg, cursor: 'pointer', fontWeight: 700, color: st.color, width: '100%' }}>
+                          style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: `1px solid ${st.color}`, background: st.bg, cursor: 'pointer', fontWeight: 700, color: st.color }}>
                           <option value="ordered">Заказано</option>
                           <option value="transit">В пути</option>
                           <option value="delivered">Получено</option>
                         </select>
                       </td>
-                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                         <button onClick={() => deletePurchase(p.id)} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: '1px solid #EED4DD', background: '#EED4DD', color: '#6A1030', cursor: 'pointer', fontWeight: 700 }}>
                           ×
                         </button>

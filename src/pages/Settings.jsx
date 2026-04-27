@@ -371,8 +371,9 @@ export default function Settings() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
-                  {['Склад WB','ФО','Доставка до клиента, ₽/шт','СДЭК, ₽/партию','СДЭК/шт',''].map(h => (
-                    <th key={h} style={{ padding: '10px 14px', textAlign: h.includes('₽') ? 'right' : 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Склад WB</th>
+                  {['ФО','Доставка до клиента, ₽/шт','СДЭК, ₽/партию','СДЭК/шт',''].map(h => (
+                    <th key={h} style={{ padding: '10px 14px', textAlign: h.includes('₽') ? 'right' : 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -380,31 +381,31 @@ export default function Settings() {
                 {warehouses.map(wh => (
                   editWh?.id === wh.id ? (
                     <tr key={wh.id} style={{ background: 'rgba(196,168,130,0.06)' }}>
-                      <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                      <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
                         <input value={editWhFields.name||''} onChange={e=>setEditWhFields({...editWhFields,name:e.target.value})} style={{...inp,width:160}}/>
                       </td>
-                      <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                      <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                         <input value={editWhFields.fo||''} onChange={e=>setEditWhFields({...editWhFields,fo:e.target.value})} style={{...inp,width:120}}/>
                       </td>
-                      <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                      <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                         <input type="number" value={editWhFields.wb_tariff??''} onChange={e=>setEditWhFields({...editWhFields,wb_tariff:e.target.value})} style={{...inp,width:80,textAlign:'right'}}/>
                       </td>
-                      <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                      <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                         <input type="number" value={editWhFields.sdek_tariff??''} onChange={e=>setEditWhFields({...editWhFields,sdek_tariff:e.target.value})} style={{...inp,width:80,textAlign:'right'}}/>
                       </td>
-                      <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color:'#9A8878', textAlign:'right', fontSize:12 }}>
+                      <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color:'#9A8878', textAlign:'right', fontSize:12, whiteSpace: 'nowrap', width: '1%' }}>
                         {editWhFields.sdek_tariff ? Math.round(parseInt(editWhFields.sdek_tariff) / 96) + ' ₽' : '—'}
                       </td>
-                      <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                         <button onClick={saveWhEdit} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, background:'#1C2E26', color:'#C4A882', border:'none', cursor:'pointer', fontWeight:700, marginRight:6 }}>Сохранить</button>
                         <button onClick={()=>setEditWh(null)} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, background:'transparent', color:'#7A6A5A', border:'1px solid rgba(74,111,82,0.2)', cursor:'pointer', fontWeight:700 }}>Отмена</button>
                       </td>
                     </tr>
                   ) : (
                     <tr key={wh.id} style={{ opacity: wh.active===false ? 0.5 : 1 }}>
-                      <td style={{ padding:'10px 14px', fontWeight:700, borderBottom:'0.5px solid rgba(74,111,82,0.07)' }}>{wh.name}</td>
-                      <td style={{ padding:'10px 14px', color:'#7A6A5A', borderBottom:'0.5px solid rgba(74,111,82,0.07)' }}>{wh.fo}</td>
-                      <td style={{ padding:'6px 14px', textAlign:'right', borderBottom:'0.5px solid rgba(74,111,82,0.07)' }}>
+                      <td style={{ padding:'10px 14px', fontWeight:700, borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap' }}>{wh.name}</td>
+                      <td style={{ padding:'10px 14px', color:'#7A6A5A', borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap', width:'1%' }}>{wh.fo}</td>
+                      <td style={{ padding:'6px 14px', textAlign:'right', borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap', width:'1%' }}>
                         {editTariffId === wh.id ? (
                           <input
                             type="number" autoFocus
@@ -423,7 +424,7 @@ export default function Settings() {
                           </span>
                         )}
                       </td>
-                      <td style={{ padding:'6px 14px', textAlign:'right', borderBottom:'0.5px solid rgba(74,111,82,0.07)' }}>
+                      <td style={{ padding:'6px 14px', textAlign:'right', borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap', width:'1%' }}>
                         {editSdekId === wh.id ? (
                           <input
                             type="number" autoFocus
@@ -442,10 +443,10 @@ export default function Settings() {
                           </span>
                         )}
                       </td>
-                      <td style={{ padding:'10px 14px', textAlign:'right', color:'#7A6A5A', fontWeight:600, borderBottom:'0.5px solid rgba(74,111,82,0.07)', fontSize:12 }}>
+                      <td style={{ padding:'10px 14px', textAlign:'right', color:'#7A6A5A', fontWeight:600, borderBottom:'0.5px solid rgba(74,111,82,0.07)', fontSize:12, whiteSpace:'nowrap', width:'1%' }}>
                         {wh.sdek_tariff ? Math.round(wh.sdek_tariff / 96) + ' ₽' : '—'}
                       </td>
-                      <td style={{ padding:'10px 14px', borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap' }}>
+                      <td style={{ padding:'10px 14px', borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap', width:'1%' }}>
                         {dbWh && (
                           <>
                             <button onClick={()=>{setEditWh(wh);setEditWhFields({name:wh.name,fo:wh.fo,wb_tariff:wh.wb_tariff??wh.tariff,sdek_tariff:wh.sdek_tariff,active:wh.active})}}
@@ -509,8 +510,10 @@ export default function Settings() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: '#F5F0E8' }}>
-                      {['Цвет','Название','Метка','nmId WB',''].map(h => (
-                        <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
+                      <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>Цвет</th>
+                      <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Название</th>
+                      {['Метка','nmId WB',''].map(h => (
+                        <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: '1%' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -518,36 +521,36 @@ export default function Settings() {
                     {products.map(prod => (
                       editProd?.id === prod.id ? (
                         <tr key={prod.id} style={{ background: 'rgba(196,168,130,0.06)' }}>
-                          <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                          <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                             <input type="color" value={editProdFields.color_hex||'#888888'}
                               onChange={e=>setEditProdFields({...editProdFields,color_hex:e.target.value})}
                               style={{ width:36, height:30, padding:2, border:'1px solid rgba(74,111,82,0.25)', borderRadius:6, cursor:'pointer' }}/>
                           </td>
-                          <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                          <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
                             <input value={editProdFields.name||''} onChange={e=>setEditProdFields({...editProdFields,name:e.target.value})} style={{...inp,width:180}}/>
                           </td>
-                          <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                          <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                             <input value={editProdFields.label||''} onChange={e=>setEditProdFields({...editProdFields,label:e.target.value})} style={{...inp,width:100}}/>
                           </td>
-                          <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                          <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                             <input type="number" value={editProdFields.nm_id||''} onChange={e=>setEditProdFields({...editProdFields,nm_id:e.target.value})} style={{...inp,width:120}}/>
                           </td>
-                          <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                          <td style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                             <button onClick={saveProdEdit} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, background:'#1C2E26', color:'#C4A882', border:'none', cursor:'pointer', fontWeight:700, marginRight:6 }}>Сохранить</button>
                             <button onClick={()=>setEditProd(null)} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, background:'transparent', color:'#7A6A5A', border:'1px solid rgba(74,111,82,0.2)', cursor:'pointer', fontWeight:700 }}>Отмена</button>
                           </td>
                         </tr>
                       ) : (
                         <tr key={prod.id} style={{ opacity: prod.active===false ? 0.5 : 1 }}>
-                          <td style={{ padding: '10px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                          <td style={{ padding: '10px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                             <span style={{ width:22, height:22, borderRadius:'50%', background:prod.color_hex||'#888', display:'inline-block', border:'1px solid rgba(0,0,0,0.1)', verticalAlign:'middle' }}></span>
                           </td>
                           <td style={{ padding: '10px 14px', fontWeight:700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap' }}>{prod.name}</td>
-                          <td style={{ padding: '10px 14px', color:'#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap' }}>{prod.label||'—'}</td>
-                          <td style={{ padding: '10px 14px', color:'#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontFamily:'monospace', fontSize:12, whiteSpace:'nowrap' }}>
+                          <td style={{ padding: '10px 14px', color:'#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap', width:'1%' }}>{prod.label||'—'}</td>
+                          <td style={{ padding: '10px 14px', color:'#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', fontFamily:'monospace', fontSize:12, whiteSpace:'nowrap', width:'1%' }}>
                             {prod.nm_id ? prod.nm_id : <span style={{ color:'#C4B8A8', fontStyle:'italic', fontFamily:'inherit' }}>не задан</span>}
                           </td>
-                          <td style={{ padding: '10px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                          <td style={{ padding: '10px 14px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                             <button onClick={()=>{setEditProd(prod);setEditProdFields({name:prod.name,label:prod.label||'',color_hex:prod.color_hex||'#888888',nm_id:prod.nm_id||'',active:prod.active})}}
                               style={{ fontSize:11, padding:'3px 8px', borderRadius:6, border:'1px solid rgba(196,168,130,0.4)', background:'rgba(196,168,130,0.1)', color:'#4A3A2A', cursor:'pointer', fontWeight:700 }}>
                               ✎
@@ -630,10 +633,10 @@ export default function Settings() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
                       <tr style={{ background: '#F5F0E8' }}>
-                        <th style={{ padding:'9px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)' }}>Материал</th>
-                        <th style={{ padding:'9px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)' }}>Ед.</th>
-                        <th style={{ padding:'9px 10px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Норма на 1 шт</th>
-                        <th style={{ padding:'9px 14px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Выход из 1 ед.</th>
+                        <th style={{ padding:'9px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Материал</th>
+                        <th style={{ padding:'9px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:'1%' }}>Ед.</th>
+                        <th style={{ padding:'9px 10px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:'1%' }}>Норма на 1 шт</th>
+                        <th style={{ padding:'9px 14px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:'1%' }}>Выход из 1 ед.</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -647,8 +650,8 @@ export default function Settings() {
                         return (
                           <tr key={mat.id} style={{ background: hasValue ? '#FAFFF8' : 'transparent' }}>
                             <td style={{ padding:'8px 14px', fontWeight: hasValue ? 700 : 400, color: hasValue ? '#1C2E26' : '#7A6A5A', borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap' }}>{mat.name}</td>
-                            <td style={{ padding:'8px 14px', color:'#7A6A5A', borderBottom:'0.5px solid rgba(74,111,82,0.07)', fontSize:12, whiteSpace:'nowrap' }}>{mat.unit}</td>
-                            <td style={{ padding:'6px 10px', textAlign:'right', borderBottom:'0.5px solid rgba(74,111,82,0.07)' }}>
+                            <td style={{ padding:'8px 14px', color:'#7A6A5A', borderBottom:'0.5px solid rgba(74,111,82,0.07)', fontSize:12, whiteSpace:'nowrap', width:'1%' }}>{mat.unit}</td>
+                            <td style={{ padding:'6px 10px', textAlign:'right', borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap', width:'1%' }}>
                               <input
                                 type="number" step="0.0001" min="0"
                                 value={displayVal}
