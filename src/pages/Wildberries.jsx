@@ -59,6 +59,12 @@ export default function Wildberries(){
   const [updating,setUpdating]=useState(false)
   const [buyoutRate,setBuyoutRate]=useState(null)
   const [buyoutLoading,setBuyoutLoading]=useState(false)
+  const [newWhPopup,setNewWhPopup]=useState(false)
+  const [newWhName,setNewWhName]=useState('')
+  const [newWhFo,setNewWhFo]=useState('')
+  const [newWhTariff,setNewWhTariff]=useState('')
+  const [newWhSdek,setNewWhSdek]=useState('')
+  const [newWhFb,setNewWhFb]=useState('')
 
   useEffect(()=>{loadAll();fetchBuyoutRate()},[])
 
@@ -172,6 +178,22 @@ export default function Wildberries(){
     await supabase.from('shipments').delete().eq('id',id);loadAll()
   }
 
+  async function addWarehouse(){
+    if(!newWhName.trim()){setNewWhFb('Введите название');return}
+    const id=newWhName.trim().toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')
+    const {error}=await supabase.from('wb_warehouses').insert({
+      id,
+      name:newWhName.trim(),
+      fo:newWhFo.trim()||null,
+      wb_tariff:parseInt(newWhTariff)||0,
+      sdek_tariff:parseInt(newWhSdek)||0,
+      active:true,
+    })
+    if(error){setNewWhFb('Ошибка: '+error.message);return}
+    setNewWhFb('✓ Склад добавлен')
+    setTimeout(()=>{setNewWhPopup(false);setNewWhFb('');setNewWhName('');setNewWhFo('');setNewWhTariff('');setNewWhSdek('');loadAll()},1500)
+  }
+
   async function saveShipEdit(){
     if(!editShip) return
     await supabase.from('shipments').update({
@@ -229,9 +251,15 @@ export default function Wildberries(){
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
         <h1 style={{fontSize:22,fontWeight:800,color:'#1C2E26'}}>Wildberries / <span style={{color:'#C4A882'}}>Склады</span></h1>
-        <Link to="/settings" style={{fontSize:12,fontWeight:700,color:'#7A6A5A',textDecoration:'none',padding:'5px 12px',border:'1px solid rgba(74,111,82,0.2)',borderRadius:8,background:'transparent'}}>
-          ⚙ Управление складами
-        </Link>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <button onClick={()=>{setNewWhPopup(true);setNewWhFb('')}}
+            style={{fontSize:12,fontWeight:700,color:'#C4A882',textDecoration:'none',padding:'5px 12px',border:'1px solid #C4A882',borderRadius:8,background:'#1C2E26',cursor:'pointer'}}>
+            + Склад WB
+          </button>
+          <Link to="/settings" style={{fontSize:12,fontWeight:700,color:'#7A6A5A',textDecoration:'none',padding:'5px 12px',border:'1px solid rgba(74,111,82,0.2)',borderRadius:8,background:'transparent'}}>
+            ⚙ Управление складами
+          </Link>
+        </div>
       </div>
 
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
@@ -637,6 +665,52 @@ export default function Wildberries(){
           </div>
         </div>
       )}
+      {/* ПОПАП — НОВЫЙ СКЛАД WB */}
+      {newWhPopup&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}} onClick={()=>setNewWhPopup(false)}>
+          <div style={{background:'#fff',borderRadius:16,padding:'24px',width:380}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+              <span style={{fontWeight:800,fontSize:16,color:'#1C2E26'}}>Новый склад WB</span>
+              <button onClick={()=>setNewWhPopup(false)} style={{fontSize:20,background:'none',border:'none',cursor:'pointer',color:'#7A6A5A'}}>×</button>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
+              <div>
+                <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>Название склада</div>
+                <input type="text" value={newWhName} onChange={e=>setNewWhName(e.target.value)} placeholder="Краснодар"
+                  style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13,boxSizing:'border-box'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>Федеральный округ</div>
+                <input type="text" value={newWhFo} onChange={e=>setNewWhFo(e.target.value)} placeholder="Южный"
+                  style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13,boxSizing:'border-box'}}/>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                <div>
+                  <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>Тариф WB, ₽/шт</div>
+                  <input type="number" value={newWhTariff} onChange={e=>setNewWhTariff(e.target.value)} placeholder="150"
+                    style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>СДЭК, ₽/ящик</div>
+                  <input type="number" value={newWhSdek} onChange={e=>setNewWhSdek(e.target.value)} placeholder="1400"
+                    style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(74,111,82,0.25)',borderRadius:8,fontSize:13}}/>
+                </div>
+              </div>
+              <div style={{fontSize:11,color:'#9A8878',padding:'6px 10px',background:'#F5F0E8',borderRadius:6}}>
+                ID склада генерируется автоматически из названия
+              </div>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:12}}>
+              <button onClick={addWarehouse}
+                style={{padding:'8px 20px',background:'#1C2E26',color:'#C4A882',border:'none',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer'}}>
+                Добавить
+              </button>
+              {newWhFb&&<div style={{fontSize:12,color:newWhFb.startsWith('✓')?'#1A6B28':'#6A1030',fontWeight:700}}>{newWhFb}</div>}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ПОПАП — РЕДАКТИРОВАТЬ ОТГРУЗКУ */}
       {editShip&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}} onClick={()=>setEditShip(null)}>
