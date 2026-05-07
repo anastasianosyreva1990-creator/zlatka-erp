@@ -276,9 +276,10 @@ export default function Finance() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1C2E26', marginBottom: 20 }}>
+      <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1C2E26', marginBottom: 4 }}>
         Финансы / <span style={{ color: '#C4A882' }}>Юнит-экономика</span>
       </h1>
+      <div style={{ fontSize: 11, color: '#9A8878', marginBottom: 20 }}>данные обновляются вручную из отчётов WB</div>
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
         {MONTHS.map(m => (
@@ -386,7 +387,7 @@ export default function Finance() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#1C2E26', borderRadius: 8 }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#F2EBE0' }}>Итого ожидаемая прибыль</div>
-                <div style={{ fontSize: 10, color: 'rgba(196,168,130,0.6)', marginTop: 2 }}>чистая прибыль с учётом выкупа {Math.round(BUYOUT*100)}%</div>
+                <div style={{ fontSize: 10, color: 'rgba(196,168,130,0.6)', marginTop: 2 }}>это чистая прибыль с учётом процента выкупа ({Math.round(BUYOUT*100)}%)</div>
               </div>
               <span style={{ fontSize: 16, fontWeight: 800, color: '#C4A882' }}>
                 {fmt(COLORS.map(c => { const prod = COLOR_PROD[c]; const qty = wbStocks.filter(s=>s.product===prod).reduce((a,s)=>a+s.quantity,0); return Math.round(qty*BUYOUT*calcUnit(selMonth,c).profitPerUnit) }).reduce((a,b)=>a+b,0))} ₽
@@ -599,7 +600,9 @@ export default function Finance() {
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
                 <th style={{ padding: '9px 12px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Месяц</th>
+                <th style={{ padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Заказы</th>
                 <th style={{ padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Выкупы</th>
+                <th style={{ padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>% выкупа</th>
                 <th style={{ padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Выручка WB</th>
                 <th style={{ padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Зарплаты</th>
                 <th style={{ padding: '9px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Материалы</th>
@@ -626,7 +629,9 @@ export default function Finance() {
                 return (
                   <tr key={d.month} style={{ background: d.month === selMonth ? 'rgba(196,168,130,0.08)' : 'transparent' }}>
                     <td style={{ padding: '9px 12px', fontWeight: 700, color: '#1C2E26', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{MONTH_NAMES[d.month]}</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{mOrd || '—'}</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{mSold}</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', color: '#185FA5', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{mBuyoutPct > 0 ? mBuyoutPct + '%' : '—'}</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', color: '#1A6B28', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{fmt(mRev)} ₽</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{fmt(mSalary)} ₽</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', color: '#6A304A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{fmt(mMat)} ₽</td>
