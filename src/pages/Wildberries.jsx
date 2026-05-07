@@ -192,9 +192,13 @@ export default function Wildberries(){
   const foGroups={}
   warehouses.forEach(wh=>{if(!foGroups[wh.fo])foGroups[wh.fo]=[];foGroups[wh.fo].push(wh)})
 
-  const defCount = warehouses.filter(wh =>
-    PRODUCTS.some(prod => getDailyRate(wh.id,prod) > 0.3 && daysLeft(wh.id,prod) <= 3)
-  ).length
+  const defCount = warehouses.filter(wh => {
+    const whName = wh.name
+    return PRODUCTS.some(prod => {
+      const found = wbSales.find(s => (s.warehouse === wh.id || s.warehouse === whName) && s.product === prod)
+      return found && found.daily_rate > 0.3 && daysLeft(wh.id, prod) <= 3
+    })
+  }).length
   const coveredCount = warehouses.filter(wh => PRODUCTS.some(prod => getStock(wh.id,prod) > 0)).length
 
   const monthOrders=orders.filter(o=>o.date?.startsWith(selMonth))

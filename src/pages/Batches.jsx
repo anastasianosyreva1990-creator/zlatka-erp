@@ -310,8 +310,17 @@ export default function Batches() {
         <table style={{ borderCollapse: 'collapse', fontSize: 12, whiteSpace: 'nowrap' }}>
           <thead>
             <tr style={{ background: '#F5F0E8' }}>
-              {['#','Дата','Размер','Состав','Склад WB','Себес/шт','Статус',''].map(h => (
-                <th key={h} style={{ padding: '10px 12px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>{h}</th>
+              {[
+                {label:'#',align:'left'},
+                {label:'Дата',align:'left'},
+                {label:'Размер',align:'right'},
+                {label:'Состав',align:'left'},
+                {label:'Склад WB',align:'left'},
+                {label:'Себес/шт',align:'right'},
+                {label:'Статус',align:'left'},
+                {label:'',align:'left'},
+              ].map(h => (
+                <th key={h.label} style={{ padding: '10px 12px', textAlign: h.align, color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h.label}</th>
               ))}
             </tr>
           </thead>
@@ -322,11 +331,11 @@ export default function Batches() {
               const wh = warehouses.find(w => w.id === batch.target_warehouse)
               return (
                 <tr key={batch.id}>
-                  <td style={{ padding: '9px 12px', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>#{batch.batch_num}</td>
-                  <td style={{ padding: '9px 12px', color: '#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '9px 12px', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>#{batch.batch_num}</td>
+                  <td style={{ padding: '9px 12px', color: '#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                     {new Date(batch.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
                   </td>
-                  <td style={{ padding: '9px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{batch.size} шт</td>
+                  <td style={{ padding: '9px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%', textAlign: 'right' }}>{batch.size} шт</td>
                   <td style={{ padding: '9px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                       {Object.entries(byColor).filter(([,q]) => q > 0).map(([prod, q]) => (
@@ -337,9 +346,9 @@ export default function Batches() {
                       ))}
                     </div>
                   </td>
-                  <td style={{ padding: '9px 12px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{wh?.name || '—'}</td>
-                  <td style={{ padding: '9px 12px', fontWeight: 800, color: '#1A6B28', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>{fmt(cost.perUnit)} ₽</td>
-                  <td style={{ padding: '9px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                  <td style={{ padding: '9px 12px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{wh?.name || '—'}</td>
+                  <td style={{ padding: '9px 12px', fontWeight: 800, color: '#1A6B28', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%', textAlign: 'right' }}>{fmt(cost.perUnit)} ₽</td>
+                  <td style={{ padding: '9px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                     <select value={batch.status} onChange={e => setStatus(batch.id, e.target.value)}
                       style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, border: '1px solid rgba(74,111,82,0.25)', background: '#fff', cursor: 'pointer', fontWeight: 700 }}>
                       <option value="Собирается">Собирается</option>
@@ -347,7 +356,7 @@ export default function Batches() {
                       <option value="Отгружено">Отгружено</option>
                     </select>
                   </td>
-                  <td style={{ padding: '9px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)' }}>
+                  <td style={{ padding: '9px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                     <button onClick={() => setDetailPopup(batch)} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: '1px solid rgba(196,168,130,0.4)', background: 'rgba(196,168,130,0.1)', color: '#4A3A2A', cursor: 'pointer', fontWeight: 700, marginRight: 4 }}>
                       Детали
                     </button>
