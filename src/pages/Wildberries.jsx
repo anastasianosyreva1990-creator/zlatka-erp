@@ -37,6 +37,7 @@ export default function Wildberries(){
   const [loading,setLoading]=useState(true)
   const [editShip,setEditShip]=useState(null)
   const [editShipFields,setEditShipFields]=useState({})
+  const [inlineEdit,setInlineEdit]=useState(null)
   const [activeTab,setActiveTab]=useState('signals')
   const [shDate,setShDate]=useState(new Date().toISOString().split('T')[0])
   const [shType,setShType]=useState('Кокошник Красный')
@@ -209,6 +210,15 @@ export default function Wildberries(){
       status:editShipFields.status,
     }).eq('id',editShip.id)
     setEditShip(null);loadAll()
+  }
+
+  async function saveInlineEdit(id,field,value){
+    const update={}
+    if(field==='ship_date') update.ship_date=value||null
+    if(field==='quantity') update.quantity=parseInt(value)||0
+    if(field==='warehouse') update.warehouse=value
+    await supabase.from('shipments').update(update).eq('id',id)
+    setInlineEdit(null);loadAll()
   }
 
   const foGroups={}
@@ -590,8 +600,11 @@ export default function Wildberries(){
               <tbody>
                 {shipments.map(s=>(
                   <tr key={s.id}>
-                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap'}}>
-                      {s.ship_date?new Date(s.ship_date).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—'}
+                    <td onClick={()=>setInlineEdit({id:s.id,field:'ship_date',value:s.ship_date||''})} style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap',cursor:'text'}}>
+                      {inlineEdit?.id===s.id&&inlineEdit.field==='ship_date'
+                        ?<input autoFocus type="date" value={inlineEdit.value} onChange={e=>setInlineEdit({...inlineEdit,value:e.target.value})} onBlur={e=>saveInlineEdit(s.id,'ship_date',e.target.value)} onKeyDown={e=>{if(e.key==='Enter')saveInlineEdit(s.id,'ship_date',inlineEdit.value);if(e.key==='Escape')setInlineEdit(null)}} style={{fontSize:11,padding:'2px 4px',border:'1px solid rgba(74,111,82,0.4)',borderRadius:4}}/>
+                        :s.ship_date?new Date(s.ship_date).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—'
+                      }
                     </td>
                     <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',whiteSpace:'nowrap'}}>
                       <span style={{display:'inline-flex',alignItems:'center',gap:5,fontWeight:700}}>
@@ -599,8 +612,20 @@ export default function Wildberries(){
                         {PLBL[s.product]||s.product}
                       </span>
                     </td>
-                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',fontWeight:800,whiteSpace:'nowrap'}}>{fmt(s.quantity)}</td>
-                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',fontWeight:600,whiteSpace:'nowrap'}}>{s.warehouse}</td>
+                    <td onClick={()=>setInlineEdit({id:s.id,field:'quantity',value:String(s.quantity)})} style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',fontWeight:800,whiteSpace:'nowrap',cursor:'text'}}>
+                      {inlineEdit?.id===s.id&&inlineEdit.field==='quantity'
+                        ?<input autoFocus type="number" value={inlineEdit.value} onChange={e=>setInlineEdit({...inlineEdit,value:e.target.value})} onBlur={e=>saveInlineEdit(s.id,'quantity',e.target.value)} onKeyDown={e=>{if(e.key==='Enter')saveInlineEdit(s.id,'quantity',inlineEdit.value);if(e.key==='Escape')setInlineEdit(null)}} style={{fontSize:11,padding:'2px 4px',border:'1px solid rgba(74,111,82,0.4)',borderRadius:4,width:60}}/>
+                        :fmt(s.quantity)
+                      }
+                    </td>
+                    <td onClick={()=>setInlineEdit({id:s.id,field:'warehouse',value:s.warehouse||''})} style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',fontWeight:600,whiteSpace:'nowrap',cursor:'pointer'}}>
+                      {inlineEdit?.id===s.id&&inlineEdit.field==='warehouse'
+                        ?<select autoFocus value={inlineEdit.value} onChange={e=>{const v=e.target.value;saveInlineEdit(s.id,'warehouse',v)}} onKeyDown={e=>e.key==='Escape'&&setInlineEdit(null)} style={{fontSize:11,padding:'2px 4px',border:'1px solid rgba(74,111,82,0.4)',borderRadius:4}}>
+                          {warehouses.map(w=><option key={w.id} value={w.name}>{w.name}</option>)}
+                        </select>
+                        :s.warehouse
+                      }
+                    </td>
                     <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap'}}>{s.tk||'—'}</td>
                     <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap'}}>{s.invoice_num||'—'}</td>
                     <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap'}}>{s.wb_supply_num||'—'}</td>
