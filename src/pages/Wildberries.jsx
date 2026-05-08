@@ -56,8 +56,6 @@ export default function Wildberries(){
   const [ordColor,setOrdColor]=useState('')
   const [ordFb,setOrdFb]=useState('')
   const [selMonth,setSelMonth]=useState('2026-04')
-  const [updateFb,setUpdateFb]=useState('')
-  const [updating,setUpdating]=useState(false)
   const [buyoutRate,setBuyoutRate]=useState(null)
   const [buyoutLoading,setBuyoutLoading]=useState(false)
   const [newWhPopup,setNewWhPopup]=useState(false)
@@ -115,32 +113,6 @@ export default function Wildberries(){
   }
   function daysLeft(whId,prod){const qty=getStock(whId,prod);const spd=getDailyRate(whId,prod)||1;return Math.floor(qty/spd)}
   function getTotalStock(prod){return warehouses.reduce((a,wh)=>a+getStock(wh.id,prod),0)}
-
-  async function runUpdate(){
-    setUpdating(true)
-    setUpdateFb('Запускаем обновление...')
-    try{
-      const token=import.meta.env.VITE_GITHUB_TOKEN
-      const r=await fetch('https://api.github.com/repos/anastasianosyreva1990-creator/zlatka-erp/actions/workflows/update_orders.yml/dispatches',{
-        method:'POST',
-        headers:{
-          'Authorization':`Bearer ${token}`,
-          'Accept':'application/vnd.github+json',
-          'Content-Type':'application/json'
-        },
-        body:JSON.stringify({ref:'main'})
-      })
-      if(r.status===204){
-        setUpdateFb('✓ Обновление запущено! Данные обновятся через ~1 минуту.')
-        setTimeout(()=>loadAll(),70000)
-      } else {
-        setUpdateFb('Ошибка запуска: ' + r.status)
-      }
-    }catch(e){
-      setUpdateFb('Ошибка: '+e.message)
-    }
-    setUpdating(false)
-  }
 
   async function addShipment(){
     if(!shQty||!shDate){setShFb('Заполните дату и количество');return}
@@ -291,8 +263,8 @@ export default function Wildberries(){
         <TabBtn id="signals" label="Сигналы"/>
         <TabBtn id="orders" label="Заказы"/>
         <TabBtn id="shipments" label="Отгрузки"/>
-        <TabBtn id="update" label="Обновить остатки"/>
       </div>
+      <div style={{fontSize:11,color:'#9A8878',marginBottom:12}}>Данные обновляются автоматически каждый день в 7:00 МСК</div>
 
       {activeTab==='signals'&&(
         <div>
@@ -659,37 +631,6 @@ export default function Wildberries(){
         </div>
       )}
 
-      {activeTab==='update'&&(
-        <div style={{maxWidth:520}}>
-          <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',padding:'20px 22px'}}>
-            <div style={{fontSize:14,fontWeight:800,color:'#1C2E26',marginBottom:8}}>Обновить данные с WB</div>
-            <div style={{fontSize:12,color:'#7A6A5A',marginBottom:20,padding:'10px 12px',background:'#F5F0E8',borderRadius:8,lineHeight:1.6}}>
-              Запускает скрипт обновления через GitHub Actions:<br/>
-              • Остатки на всех складах WB<br/>
-              • Темп продаж по складам за 14 дней<br/>
-              • Заказы за последние 7 дней<br/>
-              Занимает ~1-2 минуты.
-            </div>
-            <button onClick={runUpdate} disabled={updating} style={{
-              padding:'10px 24px',background:updating?'#7A8A7A':'#1C2E26',
-              color:'#C4A882',border:'none',borderRadius:8,fontSize:14,fontWeight:700,
-              cursor:updating?'not-allowed':'pointer',marginBottom:12
-            }}>
-              {updating ? '⏳ Запускаем...' : '🔄 Обновить данные WB'}
-            </button>
-            {updateFb&&(
-              <div style={{fontSize:12,padding:'8px 12px',borderRadius:8,
-                background:updateFb.startsWith('✓')?'#D8EED8':'#EED4DD',
-                color:updateFb.startsWith('✓')?'#1A4A28':'#6A1030',fontWeight:600}}>
-                {updateFb}
-              </div>
-            )}
-            <div style={{marginTop:16,fontSize:11,color:'#9A8878'}}>
-              Автообновление: каждый день в 7:00 МСК
-            </div>
-          </div>
-        </div>
-      )}
       {/* ПОПАП — НОВЫЙ СКЛАД WB */}
       {newWhPopup&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}} onClick={()=>setNewWhPopup(false)}>
