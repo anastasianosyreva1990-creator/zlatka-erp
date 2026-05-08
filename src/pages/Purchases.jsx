@@ -181,7 +181,7 @@ export default function Purchases() {
                         <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>В пути</th>
                         <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Расход/день</th>
                         <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Дней запаса</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}></th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Сигнал</th>
                         <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Заказать</th>
                       </tr>
                     </thead>
@@ -211,7 +211,8 @@ export default function Purchases() {
                               </span>
                             </td>
                             <td style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
-                              {daily <= 0 ? '' : days <= 3 ? <span style={{ fontSize: 10, fontWeight: 800, color: '#6A1030' }}>🔴 Срочно</span>
+                              {daily <= 0 ? <span style={{ fontSize: 10, color: '#D5CEC5' }}>—</span>
+                                : days <= 3 ? <span style={{ fontSize: 10, fontWeight: 800, color: '#6A1030' }}>🔴 Срочно</span>
                                 : days <= 7 ? <span style={{ fontSize: 10, fontWeight: 800, color: '#6A4A10' }}>🟡 Скоро</span>
                                 : <span style={{ fontSize: 10, fontWeight: 700, color: '#1A6B28' }}>🟢 Норма</span>}
                             </td>
@@ -278,7 +279,7 @@ export default function Purchases() {
                       <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', color: '#7A6A5A', whiteSpace: 'nowrap', width: '1%' }}>{p.supplier || '—'}</td>
                       <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                         <select value={p.status} onChange={e => setStatus(p.id, e.target.value)}
-                          style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: `1px solid ${st.color}`, background: st.bg, cursor: 'pointer', fontWeight: 700, color: st.color }}>
+                          style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: `1px solid ${st.color}`, background: st.bg, cursor: 'pointer', fontWeight: 700, color: st.color, minWidth: 110 }}>
                           <option value="ordered">Заказано</option>
                           <option value="transit">В пути</option>
                           <option value="delivered">Получено</option>

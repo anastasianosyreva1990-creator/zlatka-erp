@@ -17,7 +17,9 @@ SKUS = {
     539619113: 'red',
     546758919: 'white',
     539628943: 'black',
-    546766746: 'color'
+    546766746: 'color',
+    987138257: 'berries',
+    1011598966: 'roosters',
 }
 
 sb = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -42,20 +44,23 @@ for o in kok_orders:
     if not date:
         continue
     if date not in by_date:
-        by_date[date] = {'red':0,'white':0,'black':0,'color':0}
-    by_date[date][SKUS[o['nmId']]] += 1
+        by_date[date] = {'red':0,'white':0,'black':0,'color':0,'berries':0,'roosters':0}
+    field = SKUS[o['nmId']]
+    by_date[date][field] = by_date[date].get(field, 0) + 1
 
 print(f'Дат с заказами: {len(by_date)}')
 
 for date, counts in sorted(by_date.items()):
     total = sum(counts.values())
-    print(f'{date}: кр={counts["red"]} бел={counts["white"]} чёр={counts["black"]} цв={counts["color"]} итого={total}')
+    print(f'{date}: кр={counts["red"]} бел={counts["white"]} чёр={counts["black"]} цв={counts["color"]} яг={counts["berries"]} пет={counts["roosters"]} итого={total}')
     sb.table('wb_orders').upsert({
         'date': date,
         'red': counts['red'],
         'white': counts['white'],
         'black': counts['black'],
-        'color': counts['color']
+        'color': counts['color'],
+        'berries': counts['berries'],
+        'roosters': counts['roosters'],
     }, on_conflict='date').execute()
 
 print('Готово!')

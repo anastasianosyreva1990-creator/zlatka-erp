@@ -19,11 +19,10 @@ const WHS = [
   {id:'ryazan',name:'Рязань',fo:'Центральный',tariff:130,sdek:1355},
 ]
 
-const MONTHS = ['2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04']
-const MONTH_NAMES = {
-  '2025-10':'Октябрь 2025','2025-11':'Ноябрь 2025','2025-12':'Декабрь 2025',
-  '2026-01':'Январь 2026','2026-02':'Февраль 2026','2026-03':'Март 2026','2026-04':'Апрель 2026'
-}
+const MN_RU={1:'Январь',2:'Февраль',3:'Март',4:'Апрель',5:'Май',6:'Июнь',7:'Июль',8:'Август',9:'Сентябрь',10:'Октябрь',11:'Ноябрь',12:'Декабрь'}
+function buildMonths(sy,sm){const months=[],names={};let y=sy,m=sm;const now=new Date(),cy=now.getFullYear(),cm=now.getMonth()+1;while(y<cy||(y===cy&&m<=cm)){const mm=String(m).padStart(2,'0'),k=`${y}-${mm}`;months.push(k);names[k]=`${MN_RU[m]} ${y}`;if(++m>12){m=1;y++}}return{months,names}}
+const {months:MONTHS,names:MONTH_NAMES}=buildMonths(2025,10)
+const WB_CURRENT_MONTH=MONTHS[MONTHS.length-1]
 
 function logCost(wh){return wh.tariff||0}
 
@@ -55,7 +54,7 @@ export default function Wildberries(){
   const [ordBlack,setOrdBlack]=useState('')
   const [ordColor,setOrdColor]=useState('')
   const [ordFb,setOrdFb]=useState('')
-  const [selMonth,setSelMonth]=useState('2026-04')
+  const [selMonth,setSelMonth]=useState(WB_CURRENT_MONTH)
   const [buyoutRate,setBuyoutRate]=useState(null)
   const [buyoutLoading,setBuyoutLoading]=useState(false)
   const [newWhPopup,setNewWhPopup]=useState(false)
@@ -246,7 +245,7 @@ export default function Wildberries(){
 
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
         {[
-          {label:'Заказов в день (апр)',value:fmt(avgPerDay||54),sub:'средний темп'},
+          {label:`Заказов в день (${MONTH_NAMES[selMonth]?.split(' ')[0].toLowerCase()||''})`,value:fmt(avgPerDay||54),sub:'средний темп'},
           {label:'Складов с дефицитом',value:defCount,color:defCount>0?'#6A1030':'#1A6B28',sub:`из ${warehouses.length} складов`},
           {label:'Индекс локализации',value:'1.40',color:coveredCount>=warehouses.length?'#1A6B28':'#6A1030',sub:warehouses.length===0?'загрузка...':coveredCount>=warehouses.length?`все ${warehouses.length} складов покрыты ✓`:`нужно ещё ${warehouses.length-coveredCount} ${warehouses.length-coveredCount===1?'склад':warehouses.length-coveredCount<5?'склада':'складов'} для IL=1.0`},
           {label:'Процент выкупа',value:buyoutLoading?'…':buyoutRate!==null?buyoutRate+'%':'—',sub:buyoutRate!==null?'выкупы / заказы · 30 дней WB API':'загружается из WB API'},

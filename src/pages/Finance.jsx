@@ -3,8 +3,10 @@ import { supabase } from '../lib/supabase'
 
 const fmt = x => Math.round(x).toLocaleString('ru-RU')
 
-const MONTHS = ['2026-01','2026-02','2026-03','2026-04']
-const MONTH_NAMES = {'2026-01':'Январь 2026','2026-02':'Февраль 2026','2026-03':'Март 2026','2026-04':'Апрель 2026'}
+const MN_RU={1:'Январь',2:'Февраль',3:'Март',4:'Апрель',5:'Май',6:'Июнь',7:'Июль',8:'Август',9:'Сентябрь',10:'Октябрь',11:'Ноябрь',12:'Декабрь'}
+function buildMonths(sy,sm){const months=[],names={};let y=sy,m=sm;const now=new Date(),cy=now.getFullYear(),cm=now.getMonth()+1;while(y<cy||(y===cy&&m<=cm)){const mm=String(m).padStart(2,'0'),k=`${y}-${mm}`;months.push(k);names[k]=`${MN_RU[m]} ${y}`;if(++m>12){m=1;y++}}return{months,names}}
+const {months:MONTHS,names:MONTH_NAMES}=buildMonths(2026,1)
+const FIN_CURRENT_MONTH=MONTHS[MONTHS.length-1]
 const COLOR_DOT = {'Красный':'#C0392B','Белый':'#95A5A6','Черный':'#2C3E50','Цветной':'#27AE60'}
 const COLOR_PROD = {'Красный':'Кокошник Красный','Белый':'Кокошник Белый','Черный':'Кокошник Черный','Цветной':'Кокошник Цветной'}
 const COLOR_KEY = {'Красный':'red','Белый':'white','Черный':'black','Цветной':'color'}
@@ -37,7 +39,7 @@ export default function Finance() {
   const [dbPayouts, setDbPayouts] = useState([])
   const [readyStock, setReadyStock] = useState([])
   const [orders, setOrders] = useState([])
-  const [selMonth, setSelMonth] = useState('2026-04')
+  const [selMonth, setSelMonth] = useState(FIN_CURRENT_MONTH)
   const [loading, setLoading] = useState(true)
   const [buyoutRateWB, setBuyoutRateWB] = useState(null)
 

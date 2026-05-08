@@ -50,6 +50,7 @@ export default function Batches() {
   const [selectedWh, setSelectedWh] = useState('')
   const [stockEdits, setStockEdits] = useState({})
   const [newFb, setNewFb] = useState('')
+  const [editWhBatch, setEditWhBatch] = useState(null)
 
   useEffect(() => { loadAll() }, [])
 
@@ -346,7 +347,15 @@ export default function Batches() {
                       ))}
                     </div>
                   </td>
-                  <td style={{ padding: '9px 12px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>{wh?.name || '—'}</td>
+                  <td style={{ padding: '9px 12px', fontWeight: 700, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%', cursor: 'pointer' }}>
+                    {editWhBatch === batch.id
+                      ? <select autoFocus value={batch.target_warehouse || ''} onChange={async e => { await supabase.from('batches').update({target_warehouse: e.target.value || null}).eq('id', batch.id); setEditWhBatch(null); loadAll() }} onBlur={() => setEditWhBatch(null)} style={{fontSize:11,padding:'2px 6px',borderRadius:6,border:'1px solid rgba(74,111,82,0.4)'}}>
+                          <option value="">— Не выбран —</option>
+                          {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                        </select>
+                      : <span onClick={() => setEditWhBatch(batch.id)} title="Нажмите для изменения">{wh?.name || <span style={{color:'#D5CEC5'}}>—</span>}</span>
+                    }
+                  </td>
                   <td style={{ padding: '9px 12px', fontWeight: 800, color: '#1A6B28', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%', textAlign: 'right' }}>{fmt(cost.perUnit)} ₽</td>
                   <td style={{ padding: '9px 12px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: '1%' }}>
                     <select value={batch.status} onChange={e => setStatus(batch.id, e.target.value)}

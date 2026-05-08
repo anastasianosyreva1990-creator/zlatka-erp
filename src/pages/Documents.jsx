@@ -9,17 +9,30 @@ const CUSTOMER = {
   bik:'044525974',phone:'8-909-186-29-49',email:'naastia@yandex.ru',
 }
 const PCOL={'Кокошник Красный':'#C0392B','Кокошник Белый':'#7F8C8D','Кокошник Черный':'#2C3E50','Кокошник Цветной':'#27AE60','Кокошник Ягоды':'#7D3C98','Кокошник Петушки':'#E67E22'}
-const MONTHS=['Январь 2026','Февраль 2026','Март 2026','Апрель 2026']
-const MONTH_DATE={'Март 2026':'31 марта 2026','Апрель 2026':'30 апреля 2026','Февраль 2026':'28 февраля 2026','Январь 2026':'31 января 2026'}
-const MONTH_SHORT={'Март 2026':'марта','Апрель 2026':'апреля','Февраль 2026':'февраля','Январь 2026':'января'}
-const MONTH_PREFIX={'Январь 2026':'2026-01','Февраль 2026':'2026-02','Март 2026':'2026-03','Апрель 2026':'2026-04'}
+const MN_NOM=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
+const MN_GEN=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря']
+function daysInM(y,m){return new Date(y,m,0).getDate()}
+function buildDocMonths(sy,sm){
+  const months=[],date={},short={},prefix={}
+  let y=sy,m=sm
+  const now=new Date(),cy=now.getFullYear(),cm=now.getMonth()+1
+  while(y<cy||(y===cy&&m<=cm)){
+    const lbl=`${MN_NOM[m-1]} ${y}`,gen=MN_GEN[m-1],mm=String(m).padStart(2,'0')
+    months.push(lbl);date[lbl]=`${daysInM(y,m)} ${gen} ${y}`;short[lbl]=gen;prefix[lbl]=`${y}-${mm}`
+    if(++m>12){m=1;y++}
+  }
+  return{months,date,short,prefix}
+}
+const {months:MONTHS,date:MONTH_DATE,short:MONTH_SHORT,prefix:MONTH_PREFIX}=buildDocMonths(2026,1)
+const DOC_CURRENT_MONTH=MONTHS[MONTHS.length-1]
 
 export default function Documents(){
   const [sewers,setSewers]=useState([])
   const [productions,setProductions]=useState([])
   const [invoices,setInvoices]=useState([])
   const [loading,setLoading]=useState(true)
-  const [selMonth,setSelMonth]=useState('Апрель 2026')
+  const [selMonth,setSelMonth]=useState(DOC_CURRENT_MONTH)
+  const [activeTab,setActiveTab]=useState('acts')
   const [actPopup,setActPopup]=useState(null)
 
   useEffect(()=>{loadAll()},[])
@@ -60,6 +73,11 @@ export default function Documents(){
         Документы / <span style={{color:'#C4A882'}}>Акты</span>
       </h1>
 
+      <div style={{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap'}}>
+        <button onClick={()=>setActiveTab('acts')} style={{padding:'6px 16px',borderRadius:20,fontSize:12,fontWeight:700,cursor:'pointer',border:`1px solid ${activeTab==='acts'?'#1C2E26':'rgba(74,111,82,0.2)'}`,background:activeTab==='acts'?'#1C2E26':'transparent',color:activeTab==='acts'?'#C4A882':'#4A3A2A'}}>Акты</button>
+        <button onClick={()=>setActiveTab('invoices')} style={{padding:'6px 16px',borderRadius:20,fontSize:12,fontWeight:700,cursor:'pointer',border:`1px solid ${activeTab==='invoices'?'#1C2E26':'rgba(74,111,82,0.2)'}`,background:activeTab==='invoices'?'#1C2E26':'transparent',color:activeTab==='invoices'?'#C4A882':'#4A3A2A'}}>Счета</button>
+      </div>
+
       <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
         {MONTHS.map(m=>(
           <button key={m} onClick={()=>setSelMonth(m)} style={{
@@ -71,19 +89,15 @@ export default function Documents(){
         ))}
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:12}}>
+      {activeTab==='acts'&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:12}}>
         {sewers.map(sw=>{
           const byColor=getActData(sw.id,selMonth)
           const {qty,sum}=getActTotal(sw.id,selMonth)
           const inv=invoices.find(i=>i.sewer_id===sw.id&&i.month===selMonth)
-          let stBg='#EEE4C8',stColor='#6A4A10',stText='Счёт не получен'
-          if(inv?.status==='paid'){stBg='#D8EED8';stColor='#1A4A28';stText='Оплачено'}
-          else if(inv?.status==='unpaid'){stBg='#EED4DD';stColor='#6A1030';stText='Ожидает оплаты'}
           return (
             <div key={sw.id} onClick={()=>qty>0&&setActPopup({sewer:sw,month:selMonth,byColor,total:{qty,sum},inv})} style={{background:'#fff',border:'0.5px solid rgba(74,111,82,0.15)',borderRadius:12,overflow:'hidden',cursor:qty>0?'pointer':'default'}}>
-              <div style={{background:'#1C2E26',padding:'10px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div style={{background:'#1C2E26',padding:'10px 14px'}}>
                 <span style={{fontWeight:800,fontSize:13,color:'#F2EBE0'}}>{sw.name}</span>
-                <span style={{fontSize:10,padding:'2px 8px',borderRadius:8,background:stBg,color:stColor,fontWeight:800}}>{stText}</span>
               </div>
               <div style={{padding:'10px 14px'}}>
                 {Object.keys(byColor).length===0?(
@@ -114,7 +128,46 @@ export default function Documents(){
             </div>
           )
         })}
-      </div>
+      </div>}
+
+      {activeTab==='invoices'&&(
+        <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',overflowX:'auto'}}>
+          <table style={{borderCollapse:'collapse',fontSize:12,whiteSpace:'nowrap',width:'100%'}}>
+            <thead>
+              <tr style={{background:'#F5F0E8'}}>
+                <th style={{padding:'9px 12px',textAlign:'left',color:'#4A3A2A',fontWeight:700,fontSize:11,borderBottom:'1px solid rgba(196,168,130,0.2)'}}>№ Счёта</th>
+                <th style={{padding:'9px 12px',textAlign:'left',color:'#4A3A2A',fontWeight:700,fontSize:11,borderBottom:'1px solid rgba(196,168,130,0.2)'}}>Швея</th>
+                <th style={{padding:'9px 12px',textAlign:'left',color:'#4A3A2A',fontWeight:700,fontSize:11,borderBottom:'1px solid rgba(196,168,130,0.2)'}}>Месяц</th>
+                <th style={{padding:'9px 12px',textAlign:'right',color:'#4A3A2A',fontWeight:700,fontSize:11,borderBottom:'1px solid rgba(196,168,130,0.2)',width:'1%'}}>Сумма</th>
+                <th style={{padding:'9px 12px',textAlign:'left',color:'#4A3A2A',fontWeight:700,fontSize:11,borderBottom:'1px solid rgba(196,168,130,0.2)',width:'1%'}}>Статус</th>
+              </tr>
+            </thead>
+            <tbody>
+              {invoices.length===0&&<tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#7A6A5A'}}>Нет счетов</td></tr>}
+              {invoices.map(inv=>{
+                const sw=sewers.find(s=>s.id===inv.sewer_id)
+                const prefix=MONTH_PREFIX[inv.month]
+                const qty=prefix?productions.filter(p=>p.sewer_id===inv.sewer_id&&p.date?.startsWith(prefix)).reduce((a,p)=>a+p.quantity,0):0
+                const sum=qty*(sw?.tariff||0)
+                let stBg='#EEE4C8',stColor='#6A4A10',stText='Ожидает'
+                if(inv.status==='paid'){stBg='#D8EED8';stColor='#1A4A28';stText='Оплачено'}
+                else if(inv.status==='unpaid'){stBg='#EED4DD';stColor='#6A1030';stText='Не оплачено'}
+                return (
+                  <tr key={inv.id}>
+                    <td style={{padding:'8px 12px',fontWeight:700,borderBottom:'0.5px solid rgba(74,111,82,0.07)',whiteSpace:'nowrap'}}>{inv.invoice_num||'—'}</td>
+                    <td style={{padding:'8px 12px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',whiteSpace:'nowrap'}}>{inv.sewers?.name||sw?.name||'—'}</td>
+                    <td style={{padding:'8px 12px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',whiteSpace:'nowrap',color:'#7A6A5A'}}>{inv.month||'—'}</td>
+                    <td style={{padding:'8px 12px',textAlign:'right',fontWeight:800,borderBottom:'0.5px solid rgba(74,111,82,0.07)',whiteSpace:'nowrap',width:'1%',color:'#1A6B28'}}>{fmt(sum)} ₽</td>
+                    <td style={{padding:'8px 12px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',whiteSpace:'nowrap',width:'1%'}}>
+                      <span style={{fontSize:11,padding:'2px 8px',borderRadius:6,background:stBg,color:stColor,fontWeight:700}}>{stText}</span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {actPopup&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}} onClick={()=>setActPopup(null)}>

@@ -139,7 +139,8 @@ export default function Production() {
 
   if (loading) return <div style={{ padding: 40, color: '#5A4A3A' }}>Загрузка...</div>
 
-  const monthPfx = '2026-04'
+  const _now = new Date()
+  const monthPfx = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}`
   const totalProduced = productions.filter(p => p.date?.startsWith(monthPfx)).reduce((a, p) => a + p.quantity, 0)
   const totalSalary = productions.filter(p => p.date?.startsWith(monthPfx)).reduce((a, p) => {
     const sw = sewers.find(s => s.id === p.sewer_id)
