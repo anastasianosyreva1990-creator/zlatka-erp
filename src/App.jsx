@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
+import { HashRouter, Routes, Route, NavLink } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { signOut, getRole } from './lib/auth'
 import Production from './pages/Production'
@@ -224,7 +224,7 @@ export default function App() {
   if (profile?.role === 'sewer') return <SewerDashboard profile={profile} onLogout={handleLogout} />
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <div style={{ display:'flex', minHeight:'100vh' }}>
         <nav style={{ width:210, background:'#1C2E26', flexShrink:0, position:'fixed', top:0, left:0, bottom:0, display:'flex', flexDirection:'column', overflow:'hidden' }}>
           <div style={{ padding:'20px 18px 14px' }}>
@@ -309,6 +309,6 @@ export default function App() {
           </div>
         </main>
       </div>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
