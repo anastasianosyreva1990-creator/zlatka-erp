@@ -1,0 +1,18 @@
+name: Update WB Orders
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests supabase
+      - run: python3 update_orders.py
+        env:
+          WB_TOKEN: ${{ secrets.WBAPI }}
