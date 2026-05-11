@@ -53,6 +53,8 @@ export default function Wildberries(){
   const [ordWhite,setOrdWhite]=useState('')
   const [ordBlack,setOrdBlack]=useState('')
   const [ordColor,setOrdColor]=useState('')
+  const [ordYagody,setOrdYagody]=useState('')
+  const [ordPetushki,setOrdPetushki]=useState('')
   const [ordFb,setOrdFb]=useState('')
   const [selMonth,setSelMonth]=useState(WB_CURRENT_MONTH)
   const [buyoutRate,setBuyoutRate]=useState(null)
@@ -77,8 +79,9 @@ export default function Wildberries(){
       ])
       if(!salesRes.ok||!ordersRes.ok) return
       const [salesData,ordersData]=await Promise.all([salesRes.json(),ordersRes.json()])
-      const buyouts=(salesData||[]).filter(s=>s.saleID?.startsWith('S')&&s.brandName==='Златка').length
-      const totalOrders=(ordersData||[]).filter(o=>o.brandName==='Златка').length
+      const isZlatka=name=>name?.trim().toLowerCase()==='златка'
+      const buyouts=(salesData||[]).filter(s=>s.saleID?.startsWith('S')&&isZlatka(s.brandName)).length
+      const totalOrders=(ordersData||[]).filter(o=>isZlatka(o.brandName)).length
       if(totalOrders>0) setBuyoutRate(Math.round(buyouts/totalOrders*100))
     }catch(e){
       console.error('WB buyout rate:',e)
@@ -135,9 +138,11 @@ export default function Wildberries(){
       white:parseInt(ordWhite)||0,
       black:parseInt(ordBlack)||0,
       color:parseInt(ordColor)||0,
+      yagody:parseInt(ordYagody)||0,
+      petushki:parseInt(ordPetushki)||0,
     },{onConflict:'date'})
     setOrdFb(`✓ Сохранено за ${new Date(ordDate).toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}`)
-    setOrdRed('');setOrdWhite('');setOrdBlack('');setOrdColor('')
+    setOrdRed('');setOrdWhite('');setOrdBlack('');setOrdColor('');setOrdYagody('');setOrdPetushki('')
     loadAll()
   }
 
@@ -212,8 +217,10 @@ export default function Wildberries(){
     white:monthOrders.reduce((a,o)=>a+o.white,0),
     black:monthOrders.reduce((a,o)=>a+o.black,0),
     color:monthOrders.reduce((a,o)=>a+o.color,0),
+    yagody:monthOrders.reduce((a,o)=>a+(o.yagody||0),0),
+    petushki:monthOrders.reduce((a,o)=>a+(o.petushki||0),0),
   }
-  monthTotals.total=monthTotals.red+monthTotals.white+monthTotals.black+monthTotals.color
+  monthTotals.total=monthTotals.red+monthTotals.white+monthTotals.black+monthTotals.color+monthTotals.yagody+monthTotals.petushki
   const avgPerDay=monthOrders.filter(o=>o.red+o.white+o.black+o.color>0).length>0
     ?Math.round(monthTotals.total/monthOrders.filter(o=>o.red+o.white+o.black+o.color>0).length):0
 
@@ -372,7 +379,7 @@ export default function Wildberries(){
         <div>
           <div style={{background:'#fff',borderRadius:12,border:'0.5px solid rgba(74,111,82,0.15)',padding:'16px 18px',marginBottom:16}}>
             <div style={{fontSize:14,fontWeight:800,color:'#1C2E26',marginBottom:12}}>Внести заказы за день</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr',gap:10,marginBottom:12}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr 1fr 1fr',gap:10,marginBottom:12}}>
               <div>
                 <div style={{fontSize:11,color:'#7A6A5A',fontWeight:700,marginBottom:4}}>Дата</div>
                 <input type="date" value={ordDate} onChange={e=>setOrdDate(e.target.value)}
@@ -383,6 +390,8 @@ export default function Wildberries(){
                 {label:'Белый',val:ordWhite,set:setOrdWhite,color:'#95A5A6'},
                 {label:'Черный',val:ordBlack,set:setOrdBlack,color:'#2C3E50'},
                 {label:'Цветной',val:ordColor,set:setOrdColor,color:'#27AE60'},
+                {label:'Ягоды',val:ordYagody,set:setOrdYagody,color:'#7D3C98'},
+                {label:'Петушки',val:ordPetushki,set:setOrdPetushki,color:'#E67E22'},
               ].map(f=>(
                 <div key={f.label}>
                   <div style={{fontSize:11,fontWeight:700,marginBottom:4,display:'flex',alignItems:'center',gap:5}}>
@@ -413,12 +422,14 @@ export default function Wildberries(){
             ))}
           </div>
 
-          <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10,marginBottom:14}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:10,marginBottom:14}}>
             {[
               {label:'Красный',value:monthTotals.red,color:'#C0392B'},
               {label:'Белый',value:monthTotals.white,color:'#95A5A6'},
               {label:'Черный',value:monthTotals.black,color:'#2C3E50'},
               {label:'Цветной',value:monthTotals.color,color:'#27AE60'},
+              {label:'Ягоды',value:monthTotals.yagody,color:'#7D3C98'},
+              {label:'Петушки',value:monthTotals.petushki,color:'#E67E22'},
               {label:'Итого',value:monthTotals.total,color:'#1C2E26'},
             ].map((m,i)=>(
               <div key={i} style={{background:'#fff',borderRadius:10,padding:'10px 12px',border:'0.5px solid rgba(74,111,82,0.15)'}}>
@@ -448,8 +459,10 @@ export default function Wildberries(){
                   {label:'Белый',key:'white',color:'#95A5A6'},
                   {label:'Черный',key:'black',color:'#2C3E50'},
                   {label:'Цветной',key:'color',color:'#27AE60'},
+                  {label:'Ягоды',key:'yagody',color:'#7D3C98'},
+                  {label:'Петушки',key:'petushki',color:'#E67E22'},
                 ].map((row,ri)=>{
-                  const rowTotal=monthOrders.reduce((a,o)=>a+o[row.key],0)
+                  const rowTotal=monthOrders.reduce((a,o)=>a+(o[row.key]||0),0)
                   return (
                     <tr key={row.key} style={{background:ri%2===0?'#FAFAF8':'#fff'}}>
                       <td style={{padding:'7px 10px',fontWeight:700,color:row.color,position:'sticky',left:0,background:ri%2===0?'#FAFAF8':'#fff',borderRight:'1px solid rgba(74,111,82,0.1)'}}>
@@ -477,7 +490,7 @@ export default function Wildberries(){
                   {days.map(d=>{
                     const dateStr=`${selMonth}-${String(d).padStart(2,'0')}`
                     const ord=monthOrders.find(o=>o.date===dateStr)
-                    const total=ord?(ord.red+ord.white+ord.black+ord.color):null
+                    const total=ord?(ord.red+ord.white+ord.black+ord.color+(ord.yagody||0)+(ord.petushki||0)):null
                     return (
                       <td key={d} style={{padding:'6px 4px',textAlign:'center',borderTop:'1px solid rgba(196,168,130,0.2)',color:total>0?'#1C2E26':'#D5CEC5',fontWeight:total>0?800:400}}>
                         {total!==null?total:'·'}
@@ -564,32 +577,32 @@ export default function Wildberries(){
               <thead>
                 <tr style={{background:'#F5F0E8'}}>
                   {['Дата','Тип','Кол-во','Направление','ТК','№ Накладной','№ Поставки WB','Приход WB','Статус',''].map(h=>(
-                    <th key={h} style={{padding:'8px 10px',textAlign:'left',color:'#4A3A2A',fontWeight:700,fontSize:11,borderBottom:'1px solid rgba(196,168,130,0.2)',whiteSpace:'nowrap'}}>{h}</th>
+                    <th key={h} style={{padding:'8px 10px',textAlign:'left',color:'#4A3A2A',fontWeight:700,fontSize:11,borderBottom:'1px solid rgba(196,168,130,0.2)',whiteSpace:'nowrap',width:1}}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {shipments.map(s=>(
                   <tr key={s.id}>
-                    <td onClick={()=>setInlineEdit({id:s.id,field:'ship_date',value:s.ship_date||''})} style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap',cursor:'text'}}>
+                    <td onClick={()=>setInlineEdit({id:s.id,field:'ship_date',value:s.ship_date||''})} style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap',cursor:'text',width:1}}>
                       {inlineEdit?.id===s.id&&inlineEdit.field==='ship_date'
                         ?<input autoFocus type="date" value={inlineEdit.value} onChange={e=>setInlineEdit({...inlineEdit,value:e.target.value})} onBlur={e=>saveInlineEdit(s.id,'ship_date',e.target.value)} onKeyDown={e=>{if(e.key==='Enter')saveInlineEdit(s.id,'ship_date',inlineEdit.value);if(e.key==='Escape')setInlineEdit(null)}} style={{fontSize:11,padding:'2px 4px',border:'1px solid rgba(74,111,82,0.4)',borderRadius:4}}/>
                         :s.ship_date?new Date(s.ship_date).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—'
                       }
                     </td>
-                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',whiteSpace:'nowrap'}}>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',whiteSpace:'nowrap',width:1}}>
                       <span style={{display:'inline-flex',alignItems:'center',gap:5,fontWeight:700}}>
                         <span style={{width:7,height:7,borderRadius:'50%',background:PCOL[s.product]||'#888',flexShrink:0}}></span>
                         {PLBL[s.product]||s.product}
                       </span>
                     </td>
-                    <td onClick={()=>setInlineEdit({id:s.id,field:'quantity',value:String(s.quantity)})} style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',fontWeight:800,whiteSpace:'nowrap',cursor:'text'}}>
+                    <td onClick={()=>setInlineEdit({id:s.id,field:'quantity',value:String(s.quantity)})} style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',fontWeight:800,whiteSpace:'nowrap',cursor:'text',width:1}}>
                       {inlineEdit?.id===s.id&&inlineEdit.field==='quantity'
                         ?<input autoFocus type="number" value={inlineEdit.value} onChange={e=>setInlineEdit({...inlineEdit,value:e.target.value})} onBlur={e=>saveInlineEdit(s.id,'quantity',e.target.value)} onKeyDown={e=>{if(e.key==='Enter')saveInlineEdit(s.id,'quantity',inlineEdit.value);if(e.key==='Escape')setInlineEdit(null)}} style={{fontSize:11,padding:'2px 4px',border:'1px solid rgba(74,111,82,0.4)',borderRadius:4,width:60}}/>
                         :fmt(s.quantity)
                       }
                     </td>
-                    <td onClick={()=>setInlineEdit({id:s.id,field:'warehouse',value:s.warehouse||''})} style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',fontWeight:600,whiteSpace:'nowrap',cursor:'pointer'}}>
+                    <td onClick={()=>setInlineEdit({id:s.id,field:'warehouse',value:s.warehouse||''})} style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',fontWeight:600,whiteSpace:'nowrap',cursor:'pointer',width:1}}>
                       {inlineEdit?.id===s.id&&inlineEdit.field==='warehouse'
                         ?<select autoFocus value={inlineEdit.value} onChange={e=>{const v=e.target.value;saveInlineEdit(s.id,'warehouse',v)}} onKeyDown={e=>e.key==='Escape'&&setInlineEdit(null)} style={{fontSize:11,padding:'2px 4px',border:'1px solid rgba(74,111,82,0.4)',borderRadius:4}}>
                           {warehouses.map(w=><option key={w.id} value={w.name}>{w.name}</option>)}
@@ -597,13 +610,13 @@ export default function Wildberries(){
                         :s.warehouse
                       }
                     </td>
-                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap'}}>{s.tk||'—'}</td>
-                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap'}}>{s.invoice_num||'—'}</td>
-                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap'}}>{s.wb_supply_num||'—'}</td>
-                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap'}}>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap',width:1}}>{s.tk||'—'}</td>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap',width:1}}>{s.invoice_num||'—'}</td>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap',width:1}}>{s.wb_supply_num||'—'}</td>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',color:'#7A6A5A',whiteSpace:'nowrap',width:1}}>
                       {s.arrival_date?new Date(s.arrival_date).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—'}
                     </td>
-                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',whiteSpace:'nowrap'}}>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',whiteSpace:'nowrap',width:1}}>
                       <select value={s.status} onChange={e=>setShipStatus(s.id,e.target.value)}
                         style={{fontSize:11,padding:'3px 6px',borderRadius:6,border:'1px solid rgba(74,111,82,0.25)',background:'#fff',cursor:'pointer',fontWeight:700}}>
                         <option value="В пути">В пути</option>
@@ -611,7 +624,7 @@ export default function Wildberries(){
                         <option value="Принято WB">Принято WB</option>
                       </select>
                     </td>
-                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',whiteSpace:'nowrap'}}>
+                    <td style={{padding:'7px 10px',borderBottom:'0.5px solid rgba(74,111,82,0.07)',whiteSpace:'nowrap',width:1}}>
                       <button onClick={()=>{setEditShip(s);setEditShipFields({...s})}}
                         style={{fontSize:11,padding:'3px 7px',borderRadius:6,border:'1px solid rgba(196,168,130,0.4)',background:'rgba(196,168,130,0.1)',color:'#4A3A2A',cursor:'pointer',fontWeight:700,marginRight:4}}>
                         ✎

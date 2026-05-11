@@ -321,7 +321,7 @@ export default function Batches() {
                 {label:'Статус',align:'left'},
                 {label:'',align:'left'},
               ].map(h => (
-                <th key={h.label} style={{ padding: '10px 12px', textAlign: h.align, color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h.label}</th>
+                <th key={h.label} style={{ padding: '10px 12px', textAlign: h.align, color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', ...(h.label!=='Состав'?{width:1}:{}) }}>{h.label}</th>
               ))}
             </tr>
           </thead>
@@ -573,7 +573,7 @@ export default function Batches() {
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
                   {['Изделие','Кол-во'].map(h => (
-                    <th key={h} style={{ padding: '8px 12px', textAlign: h === 'Кол-во' ? 'right' : 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)' }}>{h}</th>
+                    <th key={h} style={{ padding: '8px 12px', textAlign: h === 'Кол-во' ? 'right' : 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', ...(h==='Кол-во'?{width:1}:{}) }}>{h}</th>
                   ))}
                 </tr>
               </thead>

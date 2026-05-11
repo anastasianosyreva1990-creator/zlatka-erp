@@ -78,6 +78,12 @@ export default function Settings() {
   const [newProdFields, setNewProdFields] = useState({name:'',label:'',color_hex:'#888888',nm_id:''})
   const [seedingProds, setSeedingProds] = useState(false)
 
+  // --- Материалы ---
+  const [newMatPopup, setNewMatPopup] = useState(false)
+  const [newMatFields, setNewMatFields] = useState({name:'', unit:'', category:''})
+  const [editMat, setEditMat] = useState(null)
+  const [editMatFields, setEditMatFields] = useState({})
+
   // --- Нормативы ---
   const [materials, setMaterials] = useState([])
   const [norms, setNorms] = useState([])
@@ -282,6 +288,35 @@ export default function Settings() {
     loadProducts()
   }
 
+  // --- CRUD: Материалы ---
+  async function addMaterial() {
+    if (!newMatFields.name.trim() || !newMatFields.unit.trim()) { setFb('Введите название и единицу измерения'); return }
+    const { error } = await supabase.from('materials').insert({
+      name: newMatFields.name.trim(),
+      unit: newMatFields.unit.trim(),
+      category: newMatFields.category.trim() || 'Прочее',
+    })
+    if (error) { setFb('Ошибка: ' + error.message); return }
+    setFb('✓ Материал добавлен')
+    setNewMatPopup(false)
+    setNewMatFields({name:'', unit:'', category:''})
+    loadMaterials()
+    setTimeout(() => setFb(''), 2000)
+  }
+
+  async function saveMatEdit() {
+    const { error } = await supabase.from('materials').update({
+      name: editMatFields.name,
+      unit: editMatFields.unit,
+      category: editMatFields.category || 'Прочее',
+    }).eq('id', editMat.id)
+    if (error) { setFb('Ошибка: ' + error.message); return }
+    setFb('✓ Материал сохранён')
+    setEditMat(null)
+    loadMaterials()
+    setTimeout(() => setFb(''), 2000)
+  }
+
   // --- Нормативы ---
   async function saveNorm(productId, materialId, value) {
     const key = `${productId}_${materialId}`
@@ -327,6 +362,7 @@ export default function Settings() {
         <TabBtn id="warehouses" label="Склады WB / СДЭК"/>
         <TabBtn id="products" label="Артикулы"/>
         <TabBtn id="norms" label="Нормативы материалов"/>
+        <TabBtn id="materials" label="Материалы"/>
       </div>
 
       {fb && (
@@ -768,6 +804,103 @@ export default function Settings() {
               После добавления задайте нормативы материалов на вкладке «Нормативы материалов».
             </div>
             <button onClick={addProduct} style={{ width:'100%', padding:'10px', background:'#1C2E26', color:'#C4A882', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>
+              Добавить
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ======= МАТЕРИАЛЫ ======= */}
+      {tab === 'materials' && (
+        <div>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+            <div style={{ fontSize:12, color:'#7A6A5A', fontWeight:600 }}>{materials.length} материалов</div>
+            <button onClick={()=>{ setNewMatPopup(true); setNewMatFields({name:'',unit:'',category:''}) }}
+              style={{ padding:'7px 16px', background:'#1C2E26', color:'#C4A882', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer' }}>
+              + Добавить материал
+            </button>
+          </div>
+          <div style={{ background:'#fff', borderRadius:12, border:'0.5px solid rgba(74,111,82,0.15)', overflowX:'auto' }}>
+            <table style={{ borderCollapse:'collapse', fontSize:13, whiteSpace:'nowrap' }}>
+              <thead>
+                <tr style={{ background:'#F5F0E8' }}>
+                  <th style={{ padding:'10px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Название</th>
+                  <th style={{ padding:'10px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:1 }}>Ед. изм.</th>
+                  <th style={{ padding:'10px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:1 }}>Категория</th>
+                  <th style={{ padding:'10px 14px', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:1 }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {materials.map(mat => (
+                  editMat?.id === mat.id ? (
+                    <tr key={mat.id} style={{ background:'rgba(196,168,130,0.06)' }}>
+                      <td style={{ padding:'8px 14px', borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap' }}>
+                        <input value={editMatFields.name||''} onChange={e=>setEditMatFields({...editMatFields,name:e.target.value})} style={{...inp,width:200}}/>
+                      </td>
+                      <td style={{ padding:'8px 14px', borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap', width:1 }}>
+                        <input value={editMatFields.unit||''} onChange={e=>setEditMatFields({...editMatFields,unit:e.target.value})} style={{...inp,width:80}}/>
+                      </td>
+                      <td style={{ padding:'8px 14px', borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap', width:1 }}>
+                        <select value={editMatFields.category||''} onChange={e=>setEditMatFields({...editMatFields,category:e.target.value})} style={{...inp,width:140}}>
+                          {['Ткань','Кожа','Фурнитура','Упаковка','Прочее'].map(c=><option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </td>
+                      <td style={{ padding:'8px 14px', borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap', width:1 }}>
+                        <button onClick={saveMatEdit} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, background:'#1C2E26', color:'#C4A882', border:'none', cursor:'pointer', fontWeight:700, marginRight:6 }}>Сохранить</button>
+                        <button onClick={()=>setEditMat(null)} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, background:'transparent', color:'#7A6A5A', border:'1px solid rgba(74,111,82,0.2)', cursor:'pointer', fontWeight:700 }}>Отмена</button>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={mat.id}>
+                      <td style={{ padding:'10px 14px', fontWeight:700, borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap' }}>{mat.name}</td>
+                      <td style={{ padding:'10px 14px', color:'#7A6A5A', borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap', width:1 }}>{mat.unit}</td>
+                      <td style={{ padding:'10px 14px', color:'#7A6A5A', borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap', width:1 }}>{mat.category||'—'}</td>
+                      <td style={{ padding:'10px 14px', borderBottom:'0.5px solid rgba(74,111,82,0.07)', whiteSpace:'nowrap', width:1 }}>
+                        <button onClick={()=>{ setEditMat(mat); setEditMatFields({name:mat.name,unit:mat.unit,category:mat.category||''}) }}
+                          style={{ fontSize:11, padding:'3px 8px', borderRadius:6, border:'1px solid rgba(196,168,130,0.4)', background:'rgba(196,168,130,0.1)', color:'#4A3A2A', cursor:'pointer', fontWeight:700 }}>
+                          ✎
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                ))}
+                {materials.length === 0 && (
+                  <tr><td colSpan={4} style={{ textAlign:'center', padding:32, color:'#7A6A5A' }}>Нет материалов</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ПОПАП — НОВЫЙ МАТЕРИАЛ */}
+      {newMatPopup && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }} onClick={()=>setNewMatPopup(false)}>
+          <div style={{ background:'#fff', borderRadius:16, padding:'24px', width:380 }} onClick={e=>e.stopPropagation()}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+              <span style={{ fontWeight:800, fontSize:16, color:'#1C2E26' }}>Новый материал</span>
+              <button onClick={()=>setNewMatPopup(false)} style={{ fontSize:20, background:'none', border:'none', cursor:'pointer', color:'#7A6A5A' }}>×</button>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:16 }}>
+              <div>
+                <div style={{ fontSize:11, color:'#7A6A5A', fontWeight:700, marginBottom:4 }}>Название</div>
+                <input value={newMatFields.name} onChange={e=>setNewMatFields({...newMatFields,name:e.target.value})} placeholder="Габардин Синий" style={inp}/>
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                <div>
+                  <div style={{ fontSize:11, color:'#7A6A5A', fontWeight:700, marginBottom:4 }}>Единица измерения</div>
+                  <input value={newMatFields.unit} onChange={e=>setNewMatFields({...newMatFields,unit:e.target.value})} placeholder="м" style={inp}/>
+                </div>
+                <div>
+                  <div style={{ fontSize:11, color:'#7A6A5A', fontWeight:700, marginBottom:4 }}>Категория</div>
+                  <select value={newMatFields.category} onChange={e=>setNewMatFields({...newMatFields,category:e.target.value})} style={inp}>
+                    <option value="">— выбрать —</option>
+                    {['Ткань','Кожа','Фурнитура','Упаковка','Прочее'].map(c=><option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <button onClick={addMaterial} style={{ width:'100%', padding:'10px', background:'#1C2E26', color:'#C4A882', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>
               Добавить
             </button>
           </div>

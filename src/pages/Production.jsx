@@ -123,7 +123,8 @@ export default function Production() {
   }
 
   async function updateSpeed(sewerId, speed) {
-    await supabase.from('sewers').update({ weekly_capacity: parseInt(speed) || 0 }).eq('id', sewerId)
+    const { error } = await supabase.from('sewers').update({ weekly_capacity: parseInt(speed) || 0 }).eq('id', sewerId)
+    if (error) { alert('Ошибка сохранения: ' + error.message); return }
     setEditSpeedSewer(null)
     loadAll()
   }
@@ -279,11 +280,11 @@ export default function Production() {
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
                 <th style={{ padding: '10px 14px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Материал</th>
-                <th style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>На складе</th>
+                <th style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: 1 }}>На складе</th>
                 {sewers.map(sw => (
-                  <th key={sw.id} style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{sw.name}</th>
+                  <th key={sw.id} style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: 1 }}>{sw.name}</th>
                 ))}
-                <th style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Итого</th>
+                <th style={{ padding: '10px 14px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: 1 }}>Итого</th>
               </tr>
             </thead>
             <tbody>
@@ -313,11 +314,11 @@ export default function Production() {
           <table style={{ borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
             <thead>
               <tr style={{ background: '#F5F0E8' }}>
-                <th style={{ padding:'10px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Дата</th>
-                <th style={{ padding:'10px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Швея</th>
+                <th style={{ padding:'10px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:1 }}>Дата</th>
+                <th style={{ padding:'10px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:1 }}>Швея</th>
                 <th style={{ padding:'10px 14px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Изделие</th>
-                <th style={{ padding:'10px 14px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Кол-во</th>
-                <th style={{ padding:'10px 14px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Начислено</th>
+                <th style={{ padding:'10px 14px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:1 }}>Кол-во</th>
+                <th style={{ padding:'10px 14px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:1 }}>Начислено</th>
               </tr>
             </thead>
             <tbody>
@@ -373,14 +374,14 @@ export default function Production() {
                     <thead>
                       <tr style={{ background: '#F5F0E8' }}>
                         <th style={{ padding: '7px 12px', textAlign: 'left', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)' }}>Материал</th>
-                        <th style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)' }}>Довезти</th>
+                        <th style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, fontSize: 11, color: '#4A3A2A', borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: 1 }}>Довезти</th>
                       </tr>
                     </thead>
                     <tbody>
                       {toBring.map((x, i) => (
                         <tr key={i}>
                           <td style={{ padding: '9px 12px', fontWeight: 700, color: '#1C2E26', borderBottom: '0.5px solid rgba(74,111,82,0.08)' }}>{x.matName}</td>
-                          <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: '#6A1030', borderBottom: '0.5px solid rgba(74,111,82,0.08)', whiteSpace: 'nowrap' }}>+{fmt(x.bring)} {x.unit}</td>
+                          <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: '#6A1030', borderBottom: '0.5px solid rgba(74,111,82,0.08)', whiteSpace: 'nowrap', width: 1 }}>+{fmt(x.bring)} {x.unit}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -470,14 +471,14 @@ export default function Production() {
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
                   {['Дата','Изделие','Кол-во','Начислено'].map(h => (
-                    <th key={h} style={{ padding: '8px 12px', textAlign: h==='Кол-во'||h==='Начислено'?'right':'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} style={{ padding: '8px 12px', textAlign: h==='Кол-во'||h==='Начислено'?'right':'left', color: '#4A3A2A', fontWeight: 700, fontSize: 11, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', ...(h!=='Изделие'?{width:1}:{}) }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {productions.filter(p => p.sewer_id === popup.sewer.id).map(p => (
                   <tr key={p.id}>
-                    <td style={{ padding: '6px 10px', color: '#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '6px 10px', color: '#7A6A5A', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: 1 }}>
                       {new Date(p.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
                     </td>
                     <td style={{ padding: '6px 10px', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>
@@ -486,8 +487,8 @@ export default function Production() {
                         {PLBL[p.product] || p.product}
                       </span>
                     </td>
-                    <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(p.quantity)} шт</td>
-                    <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 800, color: '#1A6B28', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap' }}>{fmt(p.earned)} ₽</td>
+                    <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 800, borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: 1 }}>{fmt(p.quantity)} шт</td>
+                    <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 800, color: '#1A6B28', borderBottom: '0.5px solid rgba(74,111,82,0.07)', whiteSpace: 'nowrap', width: 1 }}>{fmt(p.earned)} ₽</td>
                   </tr>
                 ))}
               </tbody>

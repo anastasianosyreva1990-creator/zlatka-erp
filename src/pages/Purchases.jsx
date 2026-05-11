@@ -177,12 +177,12 @@ export default function Purchases() {
                     <thead>
                       <tr style={{ background: '#F5F0E8' }}>
                         <th style={{ padding: '8px 12px', textAlign: 'left', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Материал</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>На складе</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>В пути</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Расход/день</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Дней запаса</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Сигнал</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap' }}>Заказать</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: 1 }}>На складе</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: 1 }}>В пути</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: 1 }}>Расход/день</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: 1 }}>Дней запаса</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: 1 }}>Сигнал</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', color: '#4A3A2A', fontWeight: 700, fontSize: 10, borderBottom: '1px solid rgba(196,168,130,0.2)', whiteSpace: 'nowrap', width: 1 }}>Заказать</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -254,14 +254,14 @@ export default function Purchases() {
             <table style={{ borderCollapse: 'collapse', fontSize: 12, whiteSpace: 'nowrap' }}>
               <thead>
                 <tr style={{ background: '#F5F0E8' }}>
-                  <th style={{ padding:'8px 10px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Дата</th>
+                  <th style={{ padding:'8px 10px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:1 }}>Дата</th>
                   <th style={{ padding:'8px 10px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Материал</th>
-                  <th style={{ padding:'8px 10px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Кол-во</th>
-                  <th style={{ padding:'8px 10px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Сумма</th>
-                  <th style={{ padding:'8px 10px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Цена/ед</th>
-                  <th style={{ padding:'8px 10px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Поставщик</th>
-                  <th style={{ padding:'8px 10px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}>Статус</th>
-                  <th style={{ padding:'8px 10px', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap' }}></th>
+                  <th style={{ padding:'8px 10px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:1 }}>Кол-во</th>
+                  <th style={{ padding:'8px 10px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:1 }}>Сумма</th>
+                  <th style={{ padding:'8px 10px', textAlign:'right', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:1 }}>Цена/ед</th>
+                  <th style={{ padding:'8px 10px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:1 }}>Поставщик</th>
+                  <th style={{ padding:'8px 10px', textAlign:'left', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:1 }}>Статус</th>
+                  <th style={{ padding:'8px 10px', color:'#4A3A2A', fontWeight:700, fontSize:11, borderBottom:'1px solid rgba(196,168,130,0.2)', whiteSpace:'nowrap', width:1 }}></th>
                 </tr>
               </thead>
               <tbody>
