@@ -1,0 +1,25 @@
+{
+  "name": "Златка ERP",
+  "short_name": "Златка",
+  "description": "Управление производством и складом",
+  "start_url": "/zlatka-erp/",
+  "scope": "/zlatka-erp/",
+  "display": "standalone",
+  "background_color": "#F5F0E8",
+  "theme_color": "#1C2E26",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/zlatka-erp/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/zlatka-erp/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
