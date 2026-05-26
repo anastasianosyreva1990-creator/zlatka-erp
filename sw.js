@@ -1,4 +1,4 @@
-const CACHE = 'zlatka-v7';
+const CACHE = 'zlatka-v8';
 const ASSETS = ['/zlatka-erp/', '/zlatka-erp/index.html'];
 
 self.addEventListener('install', e => {
@@ -20,11 +20,29 @@ self.addEventListener('fetch', e => {
   if (url.hostname.includes('supabase.co') ||
       url.hostname.includes('anthropic.com') ||
       url.protocol === 'chrome-extension:') {
-    return; // пропустить — браузер сам обработает
+    return;
   }
 
-  // Для остальных — сначала кэш, потом сеть
+  // Навигация (HTML) — сначала сеть, при ошибке — кэш
+  // Это гарантирует свежий index.html и исключает белый экран
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match('/zlatka-erp/index.html'))
+    );
+    return;
+  }
+
+  // Статика (JS, CSS, картинки) — кэш-первый, кэшируем при первой загрузке
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
+    caches.match(e.request).then(r => {
+      if (r) return r;
+      return fetch(e.request).then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return response;
+      });
+    })
   );
 });
