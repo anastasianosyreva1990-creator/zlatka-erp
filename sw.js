@@ -1,4 +1,4 @@
-const CACHE = 'zlatka-v8';
+const CACHE = 'zlatka-v9';
 const ASSETS = ['/zlatka-erp/', '/zlatka-erp/index.html'];
 
 self.addEventListener('install', e => {
